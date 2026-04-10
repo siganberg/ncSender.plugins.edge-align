@@ -1,0 +1,1188 @@
+<style>
+  .ea-dialog {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--color-text-primary);
+    width: 900px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+  }
+  .ea-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Layout */
+  .ea-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .ea-columns > div {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .ea-columns > div > .form-card {
+    flex: 1;
+  }
+
+  /* Form cards */
+  .form-card {
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .form-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .unit-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--color-accent, #7c5cbf);
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .form-group label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 3px;
+    color: var(--color-text-primary);
+  }
+  .form-group input, .form-group select {
+    padding: 7px 9px !important;
+    margin: 0 !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 4px !important;
+    font-size: 0.85rem;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  /* Jog + Coords card */
+  .ea-jog-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .ea-axis-values {
+    display: flex;
+    justify-content: space-around;
+    gap: 12px;
+    width: 100%;
+    padding: 6px 0;
+  }
+  .ea-axis-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .ea-axis-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+  }
+  .ea-axis-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+  .ea-jog-card nc-step-control {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    transform: scale(0.9);
+    transform-origin: center;
+  }
+
+  /* Edge visual */
+  .ea-edge-visual {
+    position: relative;
+    width: 140px;
+    height: 100px;
+    margin: 4px auto;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-surface);
+  }
+  .ea-edge-visual .ea-edge-side {
+    position: absolute;
+    background: transparent;
+    transition: background 0.2s;
+  }
+  .ea-edge-visual .ea-edge-side.active {
+    background: var(--color-accent);
+    opacity: 0.6;
+  }
+  .ea-edge-visual .ea-edge-left { top: 0; left: 0; width: 6px; height: 100%; border-radius: 2px 0 0 2px; }
+  .ea-edge-visual .ea-edge-right { top: 0; right: 0; width: 6px; height: 100%; border-radius: 0 2px 2px 0; }
+  .ea-edge-visual .ea-edge-front { bottom: 0; left: 0; width: 100%; height: 6px; border-radius: 0 0 2px 2px; }
+  .ea-edge-visual .ea-edge-back { top: 0; left: 0; width: 100%; height: 6px; border-radius: 2px 2px 0 0; }
+  .ea-edge-visual .ea-edge-label {
+    position: absolute;
+    font-size: 0.6rem;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+  }
+  .ea-edge-visual .ea-label-left { top: 50%; left: 10px; transform: translateY(-50%); }
+  .ea-edge-visual .ea-label-right { top: 50%; right: 10px; transform: translateY(-50%); }
+  .ea-edge-visual .ea-label-front { bottom: 10px; left: 50%; transform: translateX(-50%); }
+  .ea-edge-visual .ea-label-back { top: 10px; left: 50%; transform: translateX(-50%); }
+  .ea-edge-visual .ea-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f44336;
+    display: none;
+  }
+  .ea-edge-visual .ea-dot.visible { display: block; }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 20px;
+    border-radius: var(--radius-small);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: none;
+  }
+  .btn-secondary {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+  }
+  .btn-secondary:hover { background: var(--color-surface-muted); }
+  .btn-primary { background: var(--color-accent); color: white; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-success { background: #4caf50; color: white; }
+  .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-danger { background: #f44336; color: white; }
+
+  /* Info box */
+  .info-box {
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+  .info-box.success { border-color: #4caf50; background: rgba(76, 175, 80, 0.1); }
+  .info-box.warning { border-color: #ff9800; background: rgba(255, 152, 0, 0.1); }
+
+  /* Probe status */
+  .ea-probe-status {
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-small);
+    background: var(--color-surface);
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+
+  /* Results */
+  .ea-results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .ea-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--color-surface);
+    border-radius: var(--radius-small);
+    border: 1px solid var(--color-border);
+  }
+  .ea-result-item.full-width {
+    grid-column: 1 / -1;
+  }
+  .ea-result-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+  .ea-result-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .ea-result-value.highlight {
+    color: var(--color-accent);
+    font-size: 1rem;
+  }
+
+  /* Footer */
+  .plugin-dialog-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Toast notifications */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
+  }
+  .toast.success { background: #4caf50; color: white; }
+  .toast.error { background: #f44336; color: white; }
+  .toast.info { background: var(--color-accent); color: white; }
+  .toast.fadeOut { animation: fadeOut 0.3s ease forwards; }
+  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* Confirm dialog */
+  .confirm-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .confirm-box {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 8px; padding: 24px; max-width: 400px; width: 90%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .confirm-box .confirm-title {
+    font-size: 1rem; font-weight: 600; margin-bottom: 12px;
+    color: var(--color-text-primary);
+  }
+  .confirm-box .confirm-message {
+    font-size: 0.9rem; color: var(--color-text-secondary);
+    margin-bottom: 20px; line-height: 1.5;
+  }
+  .confirm-box .confirm-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+  }
+</style>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="ea-dialog" style="visibility: hidden; min-height: 200px;">
+  <!-- Scrollable content -->
+  <div class="ea-content">
+    <div class="ea-columns">
+      <!-- Left column: Edge Selection + Probe & Results -->
+      <div>
+        <div class="form-card">
+          <div class="form-card-title">Edge Selection</div>
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label>Probe Edge Side</label>
+            <select id="edgeSide">
+              <option value="left">Left (-X)</option>
+              <option value="right">Right (+X)</option>
+              <option value="front">Front (-Y)</option>
+              <option value="back">Back (+Y)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label id="labelMeasureDist">Measurement Distance</label>
+            <input type="number" id="measureDistance" value="50" min="5" step="1">
+          </div>
+          <div class="ea-edge-visual">
+            <div class="ea-edge-side ea-edge-left active" id="vizEdgeLeft"></div>
+            <div class="ea-edge-side ea-edge-right" id="vizEdgeRight"></div>
+            <div class="ea-edge-side ea-edge-front" id="vizEdgeFront"></div>
+            <div class="ea-edge-side ea-edge-back" id="vizEdgeBack"></div>
+            <span class="ea-edge-label ea-label-left">Left</span>
+            <span class="ea-edge-label ea-label-right">Right</span>
+            <span class="ea-edge-label ea-label-front">Front</span>
+            <span class="ea-edge-label ea-label-back">Back</span>
+            <div class="ea-dot" id="vizDot1"></div>
+            <div class="ea-dot" id="vizDot2"></div>
+          </div>
+        </div>
+
+        <!-- Probe & Results -->
+        <div class="form-card" style="display: flex; flex-direction: column;">
+          <div class="form-card-title">Probe & Results</div>
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <div class="ea-probe-status" id="probeStatus" style="display: none;"></div>
+            <div id="resultsEmpty" style="text-align: center; color: var(--color-text-secondary); padding: 8px 0; font-size: 0.85rem;">
+              Run the probe to measure edge alignment.
+            </div>
+            <div id="resultsData" style="display: none;">
+              <div class="ea-results-grid">
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Point 1 X</span>
+                  <span class="ea-result-value" id="resultP1X">-</span>
+                </div>
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Point 1 Y</span>
+                  <span class="ea-result-value" id="resultP1Y">-</span>
+                </div>
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Point 2 X</span>
+                  <span class="ea-result-value" id="resultP2X">-</span>
+                </div>
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Point 2 Y</span>
+                  <span class="ea-result-value" id="resultP2Y">-</span>
+                </div>
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Distance</span>
+                  <span class="ea-result-value" id="resultDistance">-</span>
+                </div>
+                <div class="ea-result-item">
+                  <span class="ea-result-label">Deviation</span>
+                  <span class="ea-result-value" id="resultDeviation">-</span>
+                </div>
+                <div class="ea-result-item full-width" style="padding: 10px;">
+                  <span class="ea-result-label" style="font-size: 0.9rem; font-weight: 600;">Rotation Angle</span>
+                  <span class="ea-result-value highlight" id="resultAngle">-</span>
+                </div>
+              </div>
+              <div id="gcodeInfo" class="info-box" style="text-align: center; margin-top: 8px; display: none;"></div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 12px;">
+              <button class="btn btn-danger" id="stopProbeBtn" style="display: none;">Stop</button>
+              <button class="btn btn-primary" id="startProbeBtn">Probe</button>
+              <button class="btn btn-success" id="applyBtn" style="display: none;" disabled>Apply Rotation</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: Probe Settings + Jog Controls -->
+      <div>
+        <div class="form-card">
+          <div class="form-card-title">Probe Settings <span class="unit-badge" id="unitBadge">mm</span></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label id="labelProbeFeed">Probe Feed Rate</label>
+              <input type="number" id="probeFeedRate" value="100" min="1" max="1000">
+            </div>
+            <div class="form-group">
+              <label id="labelTravelFeed">Travel Feed Rate</label>
+              <input type="number" id="travelFeedRate" value="2000" min="100" max="5000">
+            </div>
+          </div>
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group">
+              <label id="labelClearance">Clearance Height</label>
+              <input type="number" id="clearanceHeight" value="5" min="1" step="0.5">
+            </div>
+            <div class="form-group">
+              <label id="labelMaxProbe">Max Probe Distance</label>
+              <input type="number" id="maxProbeDistance" value="20" min="1" step="0.1">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card ea-jog-card">
+          <div class="form-card-title" style="width: 100%;">Jog Controls</div>
+          <div class="ea-axis-values">
+            <div class="ea-axis-item">
+              <span class="ea-axis-label">X</span>
+              <span class="ea-axis-value" id="ea-axis-x">0.000</span>
+            </div>
+            <div class="ea-axis-item">
+              <span class="ea-axis-label">Y</span>
+              <span class="ea-axis-value" id="ea-axis-y">0.000</span>
+            </div>
+            <div class="ea-axis-item">
+              <span class="ea-axis-label">Z</span>
+              <span class="ea-axis-value" id="ea-axis-z">0.000</span>
+            </div>
+          </div>
+          <nc-step-control></nc-step-control>
+          <nc-jog-control></nc-jog-control>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky footer -->
+  <div class="plugin-dialog-footer">
+    <button class="btn btn-secondary" onclick="window.postMessage({ type: 'close-plugin-dialog' }, '*')">Close</button>
+    <button class="btn btn-danger" id="unlockBtn" style="display: none;" title="Clear alarm and unlock machine">Unlock</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var SERVER_PORT = '__SERVER_PORT__';
+  var INITIAL_CONFIG = __INITIAL_CONFIG__;
+  var TOOL_LABEL = '__TOOL_MENU_LABEL__';
+
+  var API_BASE = window.location.origin || ('http://localhost:' + SERVER_PORT);
+  var PLUGIN_ID = 'com.ncsender.edgealign';
+
+  // Unit conversion
+  var INCH_TO_MM = 25.4;
+  var MM_TO_INCH = 0.0393701;
+  var isImperial = false;
+  var distanceUnit = 'mm';
+  var feedUnit = 'mm/min';
+
+  function convertToMetric(value) { return isImperial ? value * INCH_TO_MM : value; }
+  function convertToDisplay(value) { return isImperial ? value * MM_TO_INCH : value; }
+
+  // State
+  var probeResult = null;
+  var isProbing = false;
+  var stopProbing = false;
+  var hasGcode = false;
+  var currentFilename = null;
+  var originalFilename = null; // the non-temp source file
+
+  // --- API helpers ---
+  function saveSettings(newSettings) {
+    return loadSettings().then(function(existing) {
+      var merged = existing || {};
+      for (var key in newSettings) {
+        merged[key] = newSettings[key];
+      }
+      return fetch(API_BASE + '/api/plugins/' + PLUGIN_ID + '/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merged)
+      });
+    });
+  }
+
+  function loadSettings() {
+    return fetch(API_BASE + '/api/plugins/' + PLUGIN_ID + '/settings')
+      .then(function(r) { return r.json(); });
+  }
+
+  function sendCommand(cmd) {
+    return fetch(API_BASE + '/api/send-command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        command: cmd,
+        meta: { sourceId: 'plugin', plugin: PLUGIN_ID }
+      })
+    }).then(function(r) { return r.json(); }).then(function(result) {
+      if (result.error || result.success === false) {
+        var errorMsg = result.error?.message || result.error || 'Unknown error';
+        throw new Error('Command failed: ' + errorMsg);
+      }
+      return result;
+    });
+  }
+
+  function getServerState() {
+    return fetch(API_BASE + '/api/server-state')
+      .then(function(r) { return r.json(); });
+  }
+
+  function getInitState() {
+    return fetch(API_BASE + '/api/init')
+      .then(function(r) { return r.json(); });
+  }
+
+  function downloadGCode() {
+    // Always download the original source file, not the temp version
+    if (originalFilename) {
+      return fetch(API_BASE + '/api/gcode-files/file?path=' + encodeURIComponent(originalFilename))
+        .then(function(r) { return r.json(); })
+        .then(function(data) { return data.content; });
+    }
+    return fetch(API_BASE + '/api/gcode-files/current/download')
+      .then(function(r) { return r.text(); });
+  }
+
+  function loadTempGCode(content, filename, sourceFile) {
+    return fetch(API_BASE + '/api/gcode-files/load-temp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content, filename: filename, sourceFile: sourceFile })
+    });
+  }
+
+  function getAppSettings() {
+    return fetch(API_BASE + '/api/settings')
+      .then(function(r) { return r.json(); });
+  }
+
+  // --- Toast ---
+  function showToast(message, type, duration) {
+    type = type || 'info';
+    duration = duration || 3000;
+    var container = document.getElementById('toastContainer');
+    var toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(function() {
+      toast.classList.add('fadeOut');
+      setTimeout(function() { toast.remove(); }, 300);
+    }, duration);
+  }
+
+  function showConfirm(title, message, onConfirm) {
+    var overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML =
+      '<div class="confirm-box">' +
+        '<div class="confirm-title">' + title + '</div>' +
+        '<div class="confirm-message">' + message + '</div>' +
+        '<div class="confirm-actions">' +
+          '<button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>' +
+          '<button class="btn btn-danger" id="confirmOkBtn">Confirm</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#confirmCancelBtn').onclick = function() { overlay.remove(); };
+    overlay.querySelector('#confirmOkBtn').onclick = function() { overlay.remove(); onConfirm(); };
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  }
+
+  // --- Position parsing ---
+  function parsePositionString(posStr) {
+    if (!posStr || typeof posStr !== 'string') return null;
+    var parts = posStr.split(',').map(function(v) { return parseFloat(v.trim()); });
+    if (parts.length >= 3 && parts.every(function(v) { return !isNaN(v); })) {
+      return { x: parts[0], y: parts[1], z: parts[2] };
+    }
+    return null;
+  }
+
+  // --- Probe helpers ---
+  function waitForIdle(maxWaitMs) {
+    maxWaitMs = maxWaitMs || 10000;
+    var startTime = Date.now();
+    return new Promise(function(resolve, reject) {
+      function check() {
+        if (Date.now() - startTime >= maxWaitMs) {
+          console.log('[EdgeAlign] Warning: Timeout waiting for idle');
+          resolve(false);
+          return;
+        }
+        setTimeout(function() {
+          getServerState().then(function(state) {
+            var ms = state && state.machineState;
+            var status = ms && ms.status;
+            if (status === 'Idle') {
+              resolve(true);
+            } else if (status === 'Alarm') {
+              reject(new Error('Machine in alarm state'));
+            } else {
+              check();
+            }
+          }).catch(function() {
+            check();
+          });
+        }, 100);
+      }
+      check();
+    });
+  }
+
+  function queryProbeResult() {
+    return waitForIdle().then(function() {
+      return getServerState();
+    }).then(function(state) {
+      var ms = (state && state.machineState) || (state && state.cnc && state.cnc.machineState);
+      if (!ms) return null;
+
+      var wposStr = ms.WPos;
+      var mposStr = ms.MPos;
+      var wcoStr = ms.WCO;
+
+      if (wposStr) {
+        var wpos = parsePositionString(wposStr);
+        if (wpos) return { x: wpos.x, y: wpos.y, z: wpos.z, success: true };
+      }
+
+      if (mposStr && wcoStr) {
+        var mpos = parsePositionString(mposStr);
+        var wco = parsePositionString(wcoStr);
+        if (mpos && wco) {
+          return { x: mpos.x - wco.x, y: mpos.y - wco.y, z: mpos.z - wco.z, success: true };
+        }
+      }
+
+      if (mposStr) {
+        var mpos = parsePositionString(mposStr);
+        if (mpos) return { x: mpos.x, y: mpos.y, z: mpos.z, success: true };
+      }
+
+      return null;
+    });
+  }
+
+  // --- Coordinate display (real-time) ---
+  function extractCoordinatesFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+
+    var nestedKeys = ['machineState', 'lastStatus', 'statusReport'];
+    for (var i = 0; i < nestedKeys.length; i++) {
+      var key = nestedKeys[i];
+      if (payload[key] && typeof payload[key] === 'object') {
+        var nestedCoords = extractCoordinatesFromPayload(payload[key]);
+        if (nestedCoords) return nestedCoords;
+      }
+    }
+
+    var candidates = [payload.machineCoords, payload.MPos, payload.MPOS, payload.mpos, payload.machinePosition];
+    for (var j = 0; j < candidates.length; j++) {
+      var coords = parsePositionString(candidates[j]);
+      if (coords) return coords;
+    }
+
+    return null;
+  }
+
+  function formatCoordinate(val) {
+    if (val === undefined || val === null) return '0.000';
+    var num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return '0.000';
+    if (isImperial) num = num * MM_TO_INCH;
+    return num.toFixed(3);
+  }
+
+  function updateAxisDisplay(coords) {
+    if (!coords) return;
+    var axisX = document.getElementById('ea-axis-x');
+    var axisY = document.getElementById('ea-axis-y');
+    var axisZ = document.getElementById('ea-axis-z');
+    if (axisX && coords.x !== undefined) axisX.textContent = formatCoordinate(coords.x);
+    if (axisY && coords.y !== undefined) axisY.textContent = formatCoordinate(coords.y);
+    if (axisZ && coords.z !== undefined) axisZ.textContent = formatCoordinate(coords.z);
+  }
+
+  function handleServerStateUpdate(event) {
+    if (!event.data || event.data.type !== 'server-state-update') return;
+    var coords = extractCoordinatesFromPayload(event.data.state);
+    if (coords) updateAxisDisplay(coords);
+  }
+
+  // --- Edge visual ---
+  function updateEdgeVisual() {
+    var side = document.getElementById('edgeSide').value;
+    var sides = ['left', 'right', 'front', 'back'];
+    sides.forEach(function(s) {
+      var el = document.getElementById('vizEdge' + s.charAt(0).toUpperCase() + s.slice(1));
+      if (el) el.classList.toggle('active', s === side);
+    });
+
+    var dot1 = document.getElementById('vizDot1');
+    var dot2 = document.getElementById('vizDot2');
+    dot1.classList.add('visible');
+    dot2.classList.add('visible');
+
+    if (side === 'left') {
+      dot1.style.cssText = 'left: -1px; top: 25%; transform: translate(-50%, -50%);';
+      dot2.style.cssText = 'left: -1px; top: 75%; transform: translate(-50%, -50%);';
+    } else if (side === 'right') {
+      dot1.style.cssText = 'right: -1px; left: auto; top: 25%; transform: translate(50%, -50%);';
+      dot2.style.cssText = 'right: -1px; left: auto; top: 75%; transform: translate(50%, -50%);';
+    } else if (side === 'front') {
+      dot1.style.cssText = 'bottom: -1px; top: auto; left: 25%; transform: translate(-50%, 50%);';
+      dot2.style.cssText = 'bottom: -1px; top: auto; left: 75%; transform: translate(-50%, 50%);';
+    } else if (side === 'back') {
+      dot1.style.cssText = 'top: -1px; left: 25%; transform: translate(-50%, -50%);';
+      dot2.style.cssText = 'top: -1px; left: 75%; transform: translate(-50%, -50%);';
+    }
+  }
+
+  // --- UI state during probing ---
+  function setControlsEnabled(enabled) {
+    var inputs = document.querySelectorAll('.ea-dialog input, .ea-dialog select');
+    inputs.forEach(function(el) { el.disabled = !enabled; });
+    var applyBtn = document.getElementById('applyBtn');
+    if (applyBtn) applyBtn.disabled = !enabled;
+    // Disable jog/step web components
+    var jogEl = document.querySelector('nc-jog-control');
+    var stepEl = document.querySelector('nc-step-control');
+    if (jogEl) jogEl.style.pointerEvents = enabled ? '' : 'none';
+    if (stepEl) stepEl.style.pointerEvents = enabled ? '' : 'none';
+    if (jogEl) jogEl.style.opacity = enabled ? '' : '0.4';
+    if (stepEl) stepEl.style.opacity = enabled ? '' : '0.4';
+  }
+
+  // --- Alarm state tracking ---
+  function checkAlarmState() {
+    getServerState().then(function(state) {
+      var ms = state && state.machineState;
+      var status = ms && ms.status;
+      var unlockBtn = document.getElementById('unlockBtn');
+      if (status === 'Alarm') {
+        unlockBtn.style.display = '';
+      } else {
+        unlockBtn.style.display = 'none';
+      }
+    }).catch(function() {});
+  }
+
+  // --- Probing sequence ---
+  function setStatus(msg) {
+    var el = document.getElementById('probeStatus');
+    el.textContent = msg;
+    el.style.display = msg ? '' : 'none';
+  }
+
+  async function runProbeSequence() {
+    if (isProbing) return;
+    isProbing = true;
+    stopProbing = false;
+
+    var startBtn = document.getElementById('startProbeBtn');
+    var stopBtn = document.getElementById('stopProbeBtn');
+    startBtn.style.display = 'none';
+    stopBtn.style.display = '';
+    setControlsEnabled(false);
+
+    // Auto-save settings
+    saveSettings(collectSettings()).catch(function() {});
+
+    var side = document.getElementById('edgeSide').value;
+    var distance = convertToMetric(parseFloat(document.getElementById('measureDistance').value));
+    var probeFeed = convertToMetric(parseFloat(document.getElementById('probeFeedRate').value));
+    var travelFeed = convertToMetric(parseFloat(document.getElementById('travelFeedRate').value));
+    var clearance = convertToMetric(parseFloat(document.getElementById('clearanceHeight').value));
+    var maxProbe = convertToMetric(parseFloat(document.getElementById('maxProbeDistance').value));
+
+    try {
+      var probeAxis, probeDir, travelAxis;
+      if (side === 'left') {
+        probeAxis = 'X'; probeDir = 1; travelAxis = 'Y';
+      } else if (side === 'right') {
+        probeAxis = 'X'; probeDir = -1; travelAxis = 'Y';
+      } else if (side === 'front') {
+        probeAxis = 'Y'; probeDir = 1; travelAxis = 'X';
+      } else {
+        probeAxis = 'Y'; probeDir = -1; travelAxis = 'X';
+      }
+
+      await sendCommand('G91');
+      await waitForIdle();
+
+      // Probe Point 1
+      setStatus('Probing Point 1...');
+      await sendCommand('G38.2 ' + probeAxis + (probeDir * maxProbe).toFixed(3) + ' F' + probeFeed.toFixed(0));
+      var p1 = await queryProbeResult();
+      if (!p1 || !p1.success) throw new Error('Point 1 probe failed — no contact detected');
+      if (stopProbing) throw new Error('Stopped by user');
+
+      // Retract from Point 1
+      setStatus('Retracting from Point 1...');
+      await sendCommand('G1 ' + probeAxis + (probeDir * -clearance).toFixed(3) + ' F' + travelFeed.toFixed(0));
+      await waitForIdle();
+      if (stopProbing) throw new Error('Stopped by user');
+
+      // Travel to Point 2 (G38.4 probe-away: stops with alarm if unexpected contact)
+      setStatus('Traveling to Point 2 position...');
+      await sendCommand('G38.3 ' + travelAxis + distance.toFixed(3) + ' F' + travelFeed.toFixed(0));
+      await waitForIdle();
+      if (stopProbing) throw new Error('Stopped by user');
+
+      // Probe Point 2
+      setStatus('Probing Point 2...');
+      await sendCommand('G38.2 ' + probeAxis + (probeDir * maxProbe).toFixed(3) + ' F' + probeFeed.toFixed(0));
+      var p2 = await queryProbeResult();
+      if (!p2 || !p2.success) throw new Error('Point 2 probe failed — no contact detected');
+      if (stopProbing) throw new Error('Stopped by user');
+
+      // Retract from Point 2
+      setStatus('Retracting from Point 2...');
+      await sendCommand('G1 ' + probeAxis + (probeDir * -clearance).toFixed(3) + ' F' + travelFeed.toFixed(0));
+      await waitForIdle();
+
+      await sendCommand('G90');
+      await waitForIdle();
+
+      // Calculate angle
+      var dx, dy, angle;
+      if (probeAxis === 'X') {
+        dx = p2.x - p1.x;
+        dy = distance;
+        angle = Math.atan2(dx, dy);
+      } else {
+        dx = distance;
+        dy = p2.y - p1.y;
+        angle = Math.atan2(dy, dx);
+      }
+
+      var angleDeg = angle * (180 / Math.PI);
+
+      probeResult = {
+        point1: p1,
+        point2: p2,
+        edge: side,
+        distance: distance,
+        angle: angle,
+        angleDeg: angleDeg
+      };
+
+      showResults();
+      setStatus('Probing complete! Angle: ' + angleDeg.toFixed(4) + '\u00B0');
+      showToast('Probing complete: ' + angleDeg.toFixed(4) + '\u00B0', 'success');
+
+      // Persist probe result
+      saveSettings(collectSettings()).catch(function() {});
+
+    } catch (err) {
+      try { await sendCommand('G90'); } catch (e) {}
+      setStatus('Error: ' + err.message);
+      showToast(err.message, 'error', 5000);
+    } finally {
+      isProbing = false;
+      startBtn.style.display = '';
+      stopBtn.style.display = 'none';
+      setControlsEnabled(true);
+      checkAlarmState();
+    }
+  }
+
+  // --- Results display ---
+  function showResults() {
+    if (!probeResult) return;
+    document.getElementById('resultsEmpty').style.display = 'none';
+    document.getElementById('resultsData').style.display = '';
+    document.getElementById('applyBtn').style.display = '';
+
+    var p1 = probeResult.point1;
+    var p2 = probeResult.point2;
+    document.getElementById('resultP1X').textContent = convertToDisplay(p1.x).toFixed(3);
+    document.getElementById('resultP1Y').textContent = convertToDisplay(p1.y).toFixed(3);
+    document.getElementById('resultP2X').textContent = convertToDisplay(p2.x).toFixed(3);
+    document.getElementById('resultP2Y').textContent = convertToDisplay(p2.y).toFixed(3);
+    document.getElementById('resultDistance').textContent =
+      convertToDisplay(probeResult.distance).toFixed(3) + ' ' + distanceUnit;
+
+    var deviation;
+    if (probeResult.edge === 'left' || probeResult.edge === 'right') {
+      deviation = p2.x - p1.x;
+    } else {
+      deviation = p2.y - p1.y;
+    }
+    document.getElementById('resultDeviation').textContent =
+      convertToDisplay(deviation).toFixed(4) + ' ' + distanceUnit;
+    document.getElementById('resultAngle').textContent =
+      probeResult.angleDeg.toFixed(4) + '\u00B0';
+
+    checkGcodeForApply();
+
+    // Scroll results into view
+    document.getElementById('resultsData').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function checkGcodeForApply() {
+    var infoEl = document.getElementById('gcodeInfo');
+    getInitState().then(function(data) {
+      var state = data && data.serverState;
+      var jobLoaded = state && state.jobLoaded;
+      if (jobLoaded && jobLoaded.filename) {
+        hasGcode = true;
+        currentFilename = jobLoaded.filename;
+        // Track the original (non-temp) source file for reset support
+        if (jobLoaded.isTemporary && jobLoaded.sourceFile) {
+          originalFilename = jobLoaded.sourceFile;
+        } else {
+          originalFilename = jobLoaded.filename;
+        }
+        infoEl.textContent = 'Loaded: ' + originalFilename;
+        infoEl.className = 'info-box success';
+        infoEl.style.display = '';
+        document.getElementById('applyBtn').disabled = false;
+      } else {
+        hasGcode = false;
+        infoEl.textContent = 'No G-code loaded. Load a program to apply compensation.';
+        infoEl.className = 'info-box warning';
+        infoEl.style.display = '';
+        document.getElementById('applyBtn').disabled = true;
+      }
+    }).catch(function() {
+      infoEl.textContent = 'Could not check G-code status.';
+      infoEl.className = 'info-box warning';
+      infoEl.style.display = '';
+    });
+  }
+
+  // --- G-code rotation ---
+  function applyRotation() {
+    if (!probeResult || !hasGcode) return;
+
+    var angle = probeResult.angle;
+    var cosA = Math.cos(angle);
+    var sinA = Math.sin(angle);
+
+    document.getElementById('applyBtn').disabled = true;
+    document.getElementById('applyBtn').textContent = 'Applying...';
+
+    downloadGCode().then(function(gcodeContent) {
+      var lines = gcodeContent.split('\n');
+      var rotatedLines = [];
+      var isAbsolute = true;
+      var currentX = 0, currentY = 0;
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var trimmed = line.trim().toUpperCase();
+
+        if (trimmed.charAt(0) === '(' || trimmed.charAt(0) === ';' || trimmed.charAt(0) === '%') {
+          rotatedLines.push(line);
+          continue;
+        }
+
+        if (trimmed.indexOf('G90') >= 0 && trimmed.indexOf('G90.1') < 0) isAbsolute = true;
+        if (trimmed.indexOf('G91') >= 0 && trimmed.indexOf('G91.1') < 0) isAbsolute = false;
+
+        if (trimmed.indexOf('G53') >= 0) {
+          rotatedLines.push(line);
+          continue;
+        }
+
+        var hasMotion = /G[0-3]\b/.test(trimmed) || /^[XY]/.test(trimmed);
+        var xMatch = line.match(/([XY])([+-]?\d*\.?\d+)/gi);
+
+        if (hasMotion && xMatch && isAbsolute) {
+          var newLine = line;
+          var xVal = null, yVal = null;
+
+          var xm = line.match(/X([+-]?\d*\.?\d+)/i);
+          var ym = line.match(/Y([+-]?\d*\.?\d+)/i);
+
+          if (xm) xVal = parseFloat(xm[1]);
+          if (ym) yVal = parseFloat(ym[1]);
+
+          var origX = xVal !== null ? xVal : currentX;
+          var origY = yVal !== null ? yVal : currentY;
+
+          var newX = origX * cosA - origY * sinA;
+          var newY = origX * sinA + origY * cosA;
+
+          // Replace existing axes
+          if (xVal !== null) {
+            newLine = newLine.replace(/X[+-]?\d*\.?\d+/i, 'X' + newX.toFixed(4));
+          }
+          if (yVal !== null) {
+            newLine = newLine.replace(/Y[+-]?\d*\.?\d+/i, 'Y' + newY.toFixed(4));
+          }
+
+          // Add missing axis — rotation requires both to be correct
+          if (xVal !== null && yVal === null) {
+            // Line has X only — insert Y after X value
+            newLine = newLine.replace(/(X[+-]?\d*\.?\d+)/i, '$1 Y' + newY.toFixed(4));
+          } else if (yVal !== null && xVal === null) {
+            // Line has Y only — insert X before Y value
+            newLine = newLine.replace(/(Y[+-]?\d*\.?\d+)/i, 'X' + newX.toFixed(4) + ' $1');
+          }
+
+          currentX = origX;
+          currentY = origY;
+
+          if (/G[23]\b/.test(trimmed)) {
+            var im = line.match(/I([+-]?\d*\.?\d+)/i);
+            var jm = line.match(/J([+-]?\d*\.?\d+)/i);
+            if (im || jm) {
+              var iVal = im ? parseFloat(im[1]) : 0;
+              var jVal = jm ? parseFloat(jm[1]) : 0;
+              var newI = iVal * cosA - jVal * sinA;
+              var newJ = iVal * sinA + jVal * cosA;
+              if (im) newLine = newLine.replace(/I[+-]?\d*\.?\d+/i, 'I' + newI.toFixed(4));
+              if (jm) newLine = newLine.replace(/J[+-]?\d*\.?\d+/i, 'J' + newJ.toFixed(4));
+            }
+          }
+
+          rotatedLines.push(newLine);
+        } else {
+          var xm2 = trimmed.match(/X([+-]?\d*\.?\d+)/);
+          var ym2 = trimmed.match(/Y([+-]?\d*\.?\d+)/);
+          if (xm2 && isAbsolute) currentX = parseFloat(xm2[1]);
+          if (ym2 && isAbsolute) currentY = parseFloat(ym2[1]);
+
+          rotatedLines.push(line);
+        }
+      }
+
+      var rotatedContent = rotatedLines.join('\n');
+      var srcName = originalFilename || currentFilename;
+      var baseName = srcName.replace(/\.[^.]+$/, '');
+      var ext = srcName.match(/\.[^.]+$/) ? srcName.match(/\.[^.]+$/)[0] : '.nc';
+      var newFilename = baseName + '_rotated' + ext;
+
+      return loadTempGCode(rotatedContent, newFilename, srcName);
+    }).then(function() {
+      showToast('Rotation applied! File loaded: ' + currentFilename.replace(/\.[^.]+$/, '') + '_rotated', 'success', 5000);
+      document.getElementById('applyBtn').textContent = 'Apply Rotation';
+      document.getElementById('applyBtn').disabled = false;
+    }).catch(function(err) {
+      showToast('Failed to apply rotation: ' + err.message, 'error', 5000);
+      document.getElementById('applyBtn').textContent = 'Apply Rotation';
+      document.getElementById('applyBtn').disabled = false;
+    });
+  }
+
+  // --- Settings ---
+  function collectSettings() {
+    var settings = {
+      edgeSide: document.getElementById('edgeSide').value,
+      measureDistance: parseFloat(document.getElementById('measureDistance').value),
+      probeFeedRate: parseFloat(document.getElementById('probeFeedRate').value),
+      travelFeedRate: parseFloat(document.getElementById('travelFeedRate').value),
+      clearanceHeight: parseFloat(document.getElementById('clearanceHeight').value),
+      maxProbeDistance: parseFloat(document.getElementById('maxProbeDistance').value)
+    };
+    if (probeResult) {
+      settings.lastProbeResult = probeResult;
+    }
+    return settings;
+  }
+
+  function applySettings(settings) {
+    if (!settings) return;
+    if (settings.edgeSide) document.getElementById('edgeSide').value = settings.edgeSide;
+    if (settings.measureDistance) document.getElementById('measureDistance').value = settings.measureDistance;
+    if (settings.probeFeedRate) document.getElementById('probeFeedRate').value = settings.probeFeedRate;
+    if (settings.travelFeedRate) document.getElementById('travelFeedRate').value = settings.travelFeedRate;
+    if (settings.clearanceHeight) document.getElementById('clearanceHeight').value = settings.clearanceHeight;
+    if (settings.maxProbeDistance) document.getElementById('maxProbeDistance').value = settings.maxProbeDistance;
+    if (settings.lastProbeResult) {
+      probeResult = settings.lastProbeResult;
+      showResults();
+      checkGcodeForApply();
+    }
+  }
+
+  function updateUnitLabels() {
+    var badge = document.getElementById('unitBadge');
+    badge.textContent = distanceUnit;
+    document.getElementById('labelProbeFeed').textContent = 'Probe Feed Rate (' + feedUnit + ')';
+    document.getElementById('labelTravelFeed').textContent = 'Travel Feed Rate (' + feedUnit + ')';
+    document.getElementById('labelClearance').textContent = 'Clearance Height (' + distanceUnit + ')';
+    document.getElementById('labelMaxProbe').textContent = 'Max Probe Distance (' + distanceUnit + ')';
+    document.getElementById('labelMeasureDist').textContent = 'Measurement Distance (' + distanceUnit + ')';
+  }
+
+  // --- Init ---
+  function init() {
+    if (INITIAL_CONFIG && typeof INITIAL_CONFIG === 'object') {
+      applySettings(INITIAL_CONFIG);
+    }
+    updateEdgeVisual();
+
+    getAppSettings().then(function(settings) {
+      if (settings && (settings.units === 'imperial' || settings.units === 'in')) {
+        isImperial = true;
+        distanceUnit = 'in';
+        feedUnit = 'in/min';
+      }
+      updateUnitLabels();
+    }).catch(function() {
+      updateUnitLabels();
+    });
+
+    document.getElementById('edgeSide').addEventListener('change', updateEdgeVisual);
+
+    document.getElementById('startProbeBtn').addEventListener('click', runProbeSequence);
+    document.getElementById('stopProbeBtn').addEventListener('click', function() {
+      stopProbing = true;
+      setStatus('Stopping — issuing soft reset...');
+      sendCommand('\x18').catch(function() {});
+    });
+
+    document.getElementById('applyBtn').addEventListener('click', applyRotation);
+
+    // Unlock button
+    document.getElementById('unlockBtn').addEventListener('click', function() {
+      sendCommand('$X').then(function() {
+        showToast('Machine unlocked', 'success');
+        document.getElementById('unlockBtn').style.display = 'none';
+      }).catch(function(err) {
+        showToast('Unlock failed: ' + err.message, 'error');
+      });
+    });
+
+    // Real-time coordinate + alarm state updates
+    window.addEventListener('message', function(event) {
+      handleServerStateUpdate(event);
+      // Check alarm state from status updates
+      if (event.data && event.data.type === 'server-state-update') {
+        var state = event.data.state;
+        var status = null;
+        if (state && state.machineState) status = state.machineState.status;
+        else if (state && state.lastStatus) status = state.lastStatus.status;
+        else if (state && state.status) status = state.status;
+        var unlockBtn = document.getElementById('unlockBtn');
+        if (status === 'Alarm') {
+          unlockBtn.style.display = '';
+        } else if (status) {
+          unlockBtn.style.display = 'none';
+        }
+      }
+    });
+    getServerState().then(function(state) {
+      var coords = extractCoordinatesFromPayload(state);
+      if (coords) updateAxisDisplay(coords);
+      checkAlarmState();
+    }).catch(function() {});
+
+    document.querySelector('.ea-dialog').style.visibility = 'visible';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

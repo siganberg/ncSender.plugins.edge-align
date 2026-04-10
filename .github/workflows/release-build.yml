@@ -1,0 +1,106 @@
+name: Build and Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Plugin Release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get plugin info
+        id: plugin_info
+        run: |
+          PLUGIN_ID=$(jq -r '.id' manifest.json)
+          PLUGIN_NAME=$(jq -r '.name' manifest.json)
+          PLUGIN_VERSION=$(jq -r '.version' manifest.json)
+          TAG="${{ github.ref_name }}"
+
+          echo "PLUGIN_ID=$PLUGIN_ID" >> $GITHUB_OUTPUT
+          echo "PLUGIN_NAME=$PLUGIN_NAME" >> $GITHUB_OUTPUT
+          echo "PLUGIN_VERSION=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create plugin package
+        run: |
+          mkdir -p dist
+          PLUGIN_ID="${{ steps.plugin_info.outputs.PLUGIN_ID }}"
+          TAG="${{ steps.plugin_info.outputs.TAG }}"
+          ZIP_NAME="${PLUGIN_ID}_${TAG}.zip"
+
+          mkdir -p "tmp/$PLUGIN_ID"
+          rsync -av --exclude='.git' --exclude='.github' --exclude='.scripts' --exclude='dist' --exclude='latest_release.md' --exclude='tmp' ./ "tmp/$PLUGIN_ID/"
+
+          cd tmp
+          zip -r "../dist/$ZIP_NAME" "$PLUGIN_ID"
+          cd ..
+          rm -rf tmp
+
+          echo "Created package: dist/$ZIP_NAME"
+          ls -lh dist/
+
+      - name: Get release notes from tag message
+        id: release_notes
+        run: |
+          TAG="${{ github.ref_name }}"
+          TAG_MESSAGE=$(git tag -l --format='%(contents)' "$TAG")
+          if [ -z "$TAG_MESSAGE" ] || [ "$TAG_MESSAGE" = "Release $TAG" ]; then
+            echo "No detailed release notes in tag, generating from commits..."
+            PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+            if [ -n "$PREV_TAG" ]; then
+              TAG_MESSAGE=$(git log "$PREV_TAG..$TAG" --pretty=format:"- %s" | head -20)
+            else
+              TAG_MESSAGE="Initial release"
+            fi
+          fi
+          echo "$TAG_MESSAGE" > release-notes.md
+          cat release-notes.md
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PLUGIN_NAME="${{ steps.plugin_info.outputs.PLUGIN_NAME }}"
+          TAG="${{ steps.plugin_info.outputs.TAG }}"
+
+          gh release create "$TAG" \
+            --repo ${{ github.repository }} \
+            --title "$PLUGIN_NAME $TAG" \
+            --notes-file release-notes.md \
+            dist/*.zip
+
+      - name: Announce on Discord
+        if: success() && env.DISCORD_WEBHOOK_URL != ''
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          PLUGIN_NAME="${{ steps.plugin_info.outputs.PLUGIN_NAME }}"
+          TAG="${{ steps.plugin_info.outputs.TAG }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+          curl -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"${PLUGIN_NAME} ${TAG} Released!\",
+                \"description\": \"A new version of the ${PLUGIN_NAME} plugin is now available.\",
+                \"url\": \"${RELEASE_URL}\",
+                \"color\": 1941124,
+                \"fields\": [
+                  {
+                    \"name\": \"Download\",
+                    \"value\": \"[View Release](${RELEASE_URL})\"
+                  }
+                ]
+              }]
+            }" \
+            "$DISCORD_WEBHOOK_URL"
