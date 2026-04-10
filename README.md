@@ -2,104 +2,78 @@
 
 > **IMPORTANT DISCLAIMER:** This plugin is part of my personal ncSender project. If you choose to use it, you do so entirely at your own risk. I am not responsible for any damage, malfunction, or personal injury that may result from the use or misuse of this plugin. Use it with caution and at your own discretion.
 
-Material alignment by edge probing — find the angle of rotation and apply XY offset compensation to your G-code. This plugin probes two points along a material edge to determine how much the workpiece is rotated, then compensates by rotating your G-code program.
+Material alignment by edge probing — measure the rotation angle of your workpiece and apply XY compensation to your G-code. This plugin probes two points along a material edge to determine how much the workpiece is rotated, then compensates by rotating your G-code program.
 
 ## Features
 
-- **Edge Probing** - Probe two points along any edge (Left, Right, Front, Back) to measure material rotation
-- **Angle Calculation** - Automatically calculates the rotation angle from the two probed points
-- **G-code Rotation** - Applies rotation matrix to all XY coordinates (including arc I/J offsets) to compensate
-- **Jog Controls** - Built-in jog dial for positioning the probe without leaving the plugin
-- **Live Coordinates** - Real-time machine coordinate display
-- **Persistent Settings** - Probe settings are saved between sessions
-
-## Use Cases
-
-- Aligning CNC programs to a workpiece that's slightly rotated on the table
-- Compensating for fixture misalignment
-- Precision work where material edge alignment is critical
-
-## Configuration
-
-Access settings via **Plugins > Edge Align** in the toolbar menu.
-
-### Edge Selection
-
-| Setting | Description |
-|---------|-------------|
-| **Probe Edge Side** | Which edge of the material to probe: Left (-X), Right (+X), Front (-Y), Back (+Y) |
-| **Measurement Distance** | Distance between the two probe points along the edge |
-
-### Probe Settings
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| **Probe Feed Rate** | Speed for probing toward the edge | 100 mm/min |
-| **Travel Feed Rate** | Speed for moving between probe points | 2000 mm/min |
-| **Clearance Height** | Distance to retract after each probe | 5 mm |
-| **Max Probe Distance** | Maximum distance the probe will travel toward the edge | 20 mm |
+- **Interactive Edge Selection** — Click directly on the visual edge diagram to select which side to probe (Left, Right, Front, Back)
+- **Two-Point Edge Probing** — Probes two points along the selected edge to calculate the material's angle of rotation
+- **Safe Travel** — Uses G38.3 (probe-away) for travel between probe points to prevent collision damage
+- **G-code Rotation** — Applies rotation matrix to all XY coordinates (including arc I/J offsets) around the work origin
+- **Original File Preservation** — Always rotates from the original source file, never stacking transformations. Supports "Reset to Original" in the visualizer
+- **Persistent Probe Results** — Last measured angle is saved between sessions for re-applying rotation without re-probing
+- **Built-in Jog Controls** — Position the probe without leaving the plugin dialog
+- **Live Coordinates** — Real-time machine coordinate display
+- **Alarm Recovery** — Unlock button appears automatically when machine enters alarm state (soft reset + $X)
+- **Safety Controls** — All inputs disabled during probing; Stop button issues soft reset to halt immediately
+- **Unit Support** — Works in both metric (mm) and imperial (in) units
 
 ## How It Works
 
 ### 1. Position the Probe
 Use the built-in jog controls to position the probe near the material edge you want to measure.
 
-### 2. Select Edge and Distance
-Choose which edge to probe and how far apart the two measurement points should be. A larger distance gives a more accurate angle measurement.
+### 2. Select Edge and Configure
+Click on the edge in the visual diagram (Left, Right, Front, Back). Configure the measurement distance — a larger distance gives a more accurate angle measurement.
 
-### 3. Run Probing
-The plugin will:
+### 3. Probe
+Click **Probe**. Settings are automatically saved. The plugin will:
 1. Probe toward the edge at the current position (Point 1)
-2. Retract and travel along the edge by the measurement distance
-3. Probe toward the edge again (Point 2)
-4. Calculate the angle from the two points
+2. Retract by the configured clearance distance
+3. Travel along the edge using G38.3 (safe probe-away move)
+4. Probe toward the edge again (Point 2)
+5. Calculate the rotation angle from the two points
 
-### 4. Apply Compensation
-Review the calculated angle on the Results tab, then click **Apply Rotation** to create a new G-code file with rotated XY coordinates.
+### 4. Apply Rotation
+Review the calculated angle in the Probe Results card, then click **Apply Rotation** to create a rotated G-code file. The original file is preserved — use "Reset to Original" in the visualizer to revert.
 
-## Probing Direction
+## Configuration
 
-| Edge | Probe Direction | Travel Direction |
-|------|----------------|-----------------|
-| Left | -X | +Y |
-| Right | +X | +Y |
-| Front | -Y | +X |
-| Back | +Y | +X |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Measurement Distance** | Distance between the two probe points along the edge | 50 mm |
+| **Max Probe Distance** | Maximum distance the probe will travel toward the edge | 20 mm |
+| **Probe Feed Rate** | Speed for probing toward the edge | 100 mm/min |
+| **Travel Feed Rate** | Speed for moving between probe points | 2000 mm/min |
+| **Retract Clearance** | Distance to retract after each probe before traveling | 5 mm |
 
 ## Angle Calculation
 
-For a Left/Right edge probe:
-- `angle = atan2(X2 - X1, measurement_distance)`
-
-For a Front/Back edge probe:
-- `angle = atan2(Y2 - Y1, measurement_distance)`
-
-Where X1/Y1 and X2/Y2 are the probed edge positions at the two points.
+The angle is calculated using `atan2(deviation * direction, distance)` where the deviation factor accounts for probe direction, ensuring consistent angle results regardless of which edge is probed. All four sides of a rectangular workpiece will report the same angle.
 
 ## G-code Rotation
 
 The rotation is applied using a standard 2D rotation matrix around the work origin (0,0):
 
 ```
-newX = X * cos(-angle) - Y * sin(-angle)
-newY = X * sin(-angle) + Y * cos(-angle)
+newX = X * cos(angle) - Y * sin(angle)
+newY = X * sin(angle) + Y * cos(angle)
 ```
 
-Arc center offsets (I, J) in G2/G3 commands are also rotated.
+- Arc center offsets (I, J) in G2/G3 commands are also rotated
+- When a line only has X or Y, the missing axis is added to ensure proper rotation
+- G53 (machine coordinate) moves and comments are skipped
+- Incremental (G91) moves are not rotated
 
 ## Requirements
 
-- ncSender v2.0.0 or later
+- ncSender Pro v2.0.0 or later
 - Touch probe or edge finder
-- Probe input configured in GRBL/grblHAL
+- Probe input configured in GRBL/grblHAL/FluidNC
 
 ## Installation
 
-Install this plugin in ncSender through the **Plugins** interface.
-
-## Development
-
-This plugin is part of the ncSender ecosystem: https://github.com/siganberg/ncSender
+Install from the **Plugins** tab in ncSender settings, or download from [Releases](https://github.com/siganberg/ncSender.plugins.edge-align/releases).
 
 ## License
 
