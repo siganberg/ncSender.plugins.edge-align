@@ -1,304 +1,622 @@
 <style>
-  .ea-dialog {
+  /* Hide the outer PluginDialog header/X — this plugin owns the whole chrome
+     via its own sidebar + Close button, matching the Pneumatic ATC / QuickCut
+     look. Scoped to the plugin content so it only applies while mounted. */
+  .plugin-dialog-header { display: none !important; }
+  .plugin-dialog-content { padding: 0 !important; }
+
+  /* Full-height 2-column layout that mirrors the app Settings dialog.
+     Width = sidebar (220) + header content (coords 260 + gap 12 + jog 420)
+     + content padding (2×20) + border (1). Height fixed so switching tabs
+     doesn't resize the dialog. */
+  .ea-wrapper {
+    width: 953px;
+    max-width: 95vw;
+    height: 85vh;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-radius: var(--radius-medium);
+    overflow: hidden;
+    position: relative;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--color-text-primary);
-    width: 900px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    max-height: 80vh;
   }
-  .ea-content {
+  .ea-container {
+    display: flex;
+    flex-direction: row;
     flex: 1;
-    overflow-y: auto;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  /* Layout */
-  .ea-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-items: stretch;
-  }
-  .ea-columns > div {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .ea-columns > div > .form-card {
-    flex: 1;
-  }
-
-  /* Form cards */
-  .form-card {
-    background: var(--color-surface-muted);
-    border: 1px solid var(--color-border);
+    min-height: 0;
     border-radius: var(--radius-medium);
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15);
-    box-sizing: border-box;
-    min-width: 0;
+    overflow: hidden;
   }
-  .form-card-title {
-    font-size: 0.9rem;
+
+  /* ============ Sidebar (left navigation rail) ============ */
+  .ea-sidebar {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 220px;
+    border-right: 1px solid var(--color-border);
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--color-surface-muted) 96%, transparent) 0%,
+      var(--color-surface-muted) 100%);
+    border-radius: var(--radius-medium) 0 0 var(--radius-medium);
+    padding: 22px 14px 14px;
+    overflow-y: auto;
+  }
+  .ea-sidebar-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px 18px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .ea-sidebar-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    opacity: 0.85;
+  }
+  .ea-sidebar-title {
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--color-border);
-    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .ea-units-badge {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+    color: var(--color-accent);
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+  .ea-sidebar-nav {
     display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ea-nav-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: var(--color-text-secondary) !important;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    width: 100%;
+    text-align: left;
+    position: relative;
+    outline: none;
+    box-shadow: none;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .ea-nav-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-secondary);
+    opacity: 0.75;
+    transition: color 0.15s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+  }
+  .ea-nav-icon svg { display: block; width: 18px; height: 18px; }
+  .ea-nav-label {
+    flex: 1;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ea-nav-btn:hover {
+    background: color-mix(in srgb, var(--color-text-primary, #fff) 5%, transparent) !important;
+    color: var(--color-text-primary) !important;
+  }
+  .ea-nav-btn:hover .ea-nav-icon { color: var(--color-accent); opacity: 1; }
+  .ea-nav-btn.active {
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--color-accent) 16%, transparent) 0%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent) 100%) !important;
+    color: var(--color-text-primary) !important;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent) !important;
+  }
+  .ea-nav-btn.active .ea-nav-icon { color: var(--color-accent); opacity: 1; }
+  .ea-nav-btn.active .ea-nav-label { font-weight: 600; }
+  .ea-tab-caret {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 70%, transparent);
+    flex-shrink: 0;
+    display: none;
+  }
+  .ea-nav-btn.active .ea-tab-caret { display: block; }
+  .ea-sidebar-footer {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: center;
+  }
+  .ea-close-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-  }
-  .unit-badge {
-    font-size: 0.65rem;
+    min-width: 130px;
+    min-height: 44px;
+    padding: 12px 32px;
+    background: var(--gradient-accent, var(--color-accent)) !important;
+    color: #fff !important;
+    cursor: pointer;
+    transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+    font-size: 0.95rem;
     font-weight: 600;
-    padding: 2px 7px;
-    border-radius: 10px;
-    background: var(--color-accent, #7c5cbf);
-    color: #fff;
-    letter-spacing: 0.5px;
-  }
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .form-group {
-    display: flex;
-    flex-direction: column;
-  }
-  .form-group label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    margin-bottom: 3px;
-    color: var(--color-text-primary);
-  }
-  .ea-edge-visual ~ .form-group input {
-    text-align: right;
-  }
-  .form-group input, .form-group select {
-    padding: 7px 9px !important;
-    margin: 0 !important;
-    border: 1px solid var(--color-border) !important;
-    border-radius: 4px !important;
-    font-size: 0.85rem;
-    background: var(--color-surface);
-    color: var(--color-text-primary);
-    box-sizing: border-box;
-    width: 100%;
-  }
-  .form-group input:focus, .form-group select:focus {
+    font-family: inherit;
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 25%, transparent) !important;
+    border-radius: 8px !important;
+    border: none !important;
     outline: none;
-    border-color: var(--color-accent);
+    line-height: 1.2;
+    margin: 0;
   }
+  .ea-close-btn:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+  .ea-close-btn:active { transform: translateY(1px); }
 
-  /* Jog + Coords card */
-  .ea-jog-card {
+  /* ============ Content area ============ */
+  /* Content is a flex column: header (fixed) + scrollable panel + footer
+     (fixed). The scroll happens on the middle panel so footers stay pinned. */
+  .ea-content {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--color-surface);
+    border-radius: 0 var(--radius-medium) var(--radius-medium) 0;
+    overflow: hidden;
+  }
+  .ea-content.active { display: flex; }
+  .ea-panel-header {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    padding: 15px 20px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .ea-panel-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+  .ea-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg, 16px);
+    padding: 15px 20px 20px;
+  }
+  .ea-panel-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
     gap: 10px;
+    padding: 14px 20px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+  .ea-footer-spacer { flex: 1; }
+
+  /* Header widgets: Machine DRO (left) + Step & Jog cluster (right). */
+  .ea-header-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 420px);
+    gap: 12px;
+    justify-content: start;
+  }
+  .ea-header-card {
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 12px 16px;
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    min-height: 160px;
   }
-  .ea-axis-values {
-    display: flex;
-    justify-content: space-around;
-    gap: 12px;
-    width: 100%;
-    padding: 6px 0;
-  }
-  .ea-axis-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-  .ea-axis-label {
-    font-size: 0.7rem;
+  .ea-mcoord { width: 100%; }
+  .ea-mcoord-title {
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--color-text-secondary);
     text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    text-align: center;
   }
-  .ea-axis-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.95rem;
+  .ea-mcoord-row { display: flex; flex-direction: column; gap: 6px; }
+  .ea-mcoord-cell {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: stretch;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--color-surface);
+  }
+  .ea-mcoord-axis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: color-mix(in srgb, var(--color-text-primary) 10%, var(--color-surface));
+    border-right: 1px solid var(--color-border);
+  }
+  .ea-mcoord-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 8px 14px;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    font-size: 1.2rem;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     color: var(--color-accent);
+    line-height: 1;
+    text-align: right;
   }
-  .ea-jog-card nc-step-control {
+  .ea-jog-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
     width: 100%;
+    transition: opacity 0.15s ease;
+  }
+  .ea-jog-controls nc-step-control,
+  .ea-jog-controls nc-jog-control {
     display: flex;
     justify-content: center;
-    transform: scale(0.9);
+    transform: scale(1.1);
     transform-origin: center;
+    margin: 6px 0;
   }
+  /* Edge alignment is XY work; hide a 4th axis if the firmware exposes one. */
+  .ea-jog-controls nc-jog-control .jog-a { display: none !important; }
+  .ea-jog-controls.disabled { pointer-events: none; opacity: 0.4; }
 
-  /* Edge visual */
+  /* ============ Cards, fields, inputs ============ */
+  .ea-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: var(--gap-md, 16px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .ea-card *, .ea-card *::before, .ea-card *::after { box-sizing: border-box; }
+  .ea-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+  .ea-card-help {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+  }
+  .ea-row-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .ea-row-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .ea-field { display: flex; flex-direction: column; gap: 6px; }
+  .ea-field label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .ea-input {
+    padding: 9px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+  }
+  .ea-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  }
+  .ea-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Buttons */
+  .ea-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 999px !important;
+    background: var(--color-accent) !important;
+    color: #fff !important;
+    border: none !important;
+    outline: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.05s ease;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .ea-btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .ea-btn:active:not(:disabled) { transform: translateY(1px); }
+  .ea-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ea-btn-ghost {
+    background: var(--color-surface-muted) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border) !important;
+  }
+  .ea-btn-ghost:hover:not(:disabled) {
+    background: var(--color-surface) !important;
+    border-color: var(--color-accent) !important;
+    color: var(--color-accent) !important;
+    filter: none;
+  }
+  .ea-btn-danger {
+    background: var(--color-danger, #e74c3c) !important;
+    color: #fff !important;
+    border: none !important;
+  }
+  .ea-btn-success {
+    background: var(--color-success, #4caf50) !important;
+    color: #fff !important;
+    border: none !important;
+  }
+  .ea-btn-wide { min-width: 160px; padding: 10px 24px; font-size: 0.9rem; }
+
+  /* ============ Edge picker ============ */
+  .ea-edge-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
   .ea-edge-visual {
     position: relative;
     width: 100%;
-    height: 200px;
-    margin: 8px auto;
-    border: 2px solid var(--color-border);
-    border-radius: 6px;
-    background: var(--color-surface);
+    height: 220px;
+    border: 4px solid var(--color-text-secondary, #888);
+    border-radius: 8px;
+    /* Material fill: the same 45° hatch the QuickCut previews use. */
+    background-color: var(--color-surface-muted);
+    /* QuickCut draws a 6-unit SVG pattern in a 100-unit box scaled to 160 px,
+       which lands on screen as ~1.6 px lines every ~9.6 px running "/". */
+    background-image: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-text-secondary, #888) 28%, transparent) 0 1.6px,
+      transparent 1.6px 9.6px);
+    box-sizing: border-box;
   }
   .ea-edge-visual .ea-edge-side {
     position: absolute;
     background: transparent;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.2s, opacity 0.2s;
     z-index: 2;
   }
-  .ea-edge-visual .ea-edge-side:hover {
-    background: var(--color-accent);
-    opacity: 0.3;
-  }
-  .ea-edge-visual .ea-edge-side.active {
-    background: var(--color-accent);
-    opacity: 0.6;
-  }
-  .ea-edge-visual .ea-edge-left { top: 0; left: 0; width: 20px; height: 100%; border-radius: 4px 0 0 4px; }
-  .ea-edge-visual .ea-edge-right { top: 0; right: 0; width: 20px; height: 100%; border-radius: 0 4px 4px 0; }
-  .ea-edge-visual .ea-edge-front { bottom: 0; left: 0; width: 100%; height: 20px; border-radius: 0 0 4px 4px; }
-  .ea-edge-visual .ea-edge-back { top: 0; left: 0; width: 100%; height: 20px; border-radius: 4px 4px 0 0; }
+  .ea-edge-visual .ea-edge-side:hover { background: var(--color-accent); opacity: 0.3; }
+  .ea-edge-visual .ea-edge-side.active { background: var(--color-accent); opacity: 0.6; }
+  .ea-edge-visual .ea-edge-left  { top: 0; left: 0; width: 20px; height: 100%; border-radius: 6px 0 0 6px; }
+  .ea-edge-visual .ea-edge-right { top: 0; right: 0; width: 20px; height: 100%; border-radius: 0 6px 6px 0; }
+  .ea-edge-visual .ea-edge-front { bottom: 0; left: 0; width: 100%; height: 20px; border-radius: 0 0 6px 6px; }
+  .ea-edge-visual .ea-edge-back  { top: 0; left: 0; width: 100%; height: 20px; border-radius: 6px 6px 0 0; }
   .ea-edge-visual .ea-edge-label {
     position: absolute;
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
+    font-size: 1rem;
+    color: var(--color-text-primary);
     font-weight: 600;
     cursor: pointer;
     z-index: 3;
     user-select: none;
+    /* Solid chip so the hatch never runs through the text. */
+    background: var(--color-surface-muted);
+    padding: 2px 8px;
+    border-radius: 6px;
   }
-  .ea-edge-visual .ea-edge-label:hover {
-    color: var(--color-accent);
+  .ea-edge-visual .ea-edge-label:hover { color: var(--color-accent); }
+  .ea-edge-visual .ea-edge-label.active { color: var(--color-accent); font-weight: 700; }
+  .ea-edge-visual .ea-label-left  { top: 50%; left: 28px; transform: translateY(-50%); }
+  .ea-edge-visual .ea-label-right { top: 50%; right: 28px; transform: translateY(-50%); }
+  .ea-edge-visual .ea-label-front { bottom: 26px; left: 50%; transform: translateX(-50%); }
+  .ea-edge-visual .ea-label-back  { top: 26px; left: 50%; transform: translateX(-50%); }
+  .ea-edge-visual .ea-material-hint {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    pointer-events: none;
+    background: var(--color-surface-muted);
+    padding: 2px 10px;
+    border-radius: 6px;
   }
-  .ea-edge-visual .ea-edge-label.active {
-    color: var(--color-accent);
-    font-weight: 700;
-  }
-  .ea-edge-visual .ea-label-left { top: 50%; left: 26px; transform: translateY(-50%); }
-  .ea-edge-visual .ea-label-right { top: 50%; right: 26px; transform: translateY(-50%); }
-  .ea-edge-visual .ea-label-front { bottom: 24px; left: 50%; transform: translateX(-50%); }
-  .ea-edge-visual .ea-label-back { top: 24px; left: 50%; transform: translateX(-50%); }
   .ea-edge-visual .ea-dot {
     position: absolute;
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #f44336;
+    background: var(--color-accent);
     display: none;
     z-index: 4;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    box-shadow: 0 0 0 2px var(--color-surface), 0 1px 4px rgba(0,0,0,0.4);
   }
   .ea-edge-visual .ea-dot.visible { display: flex; align-items: center; justify-content: center; }
-  .ea-dot-label {
-    font-size: 0.55rem;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1;
-  }
+  .ea-dot-label { font-size: 0.55rem; font-weight: 700; color: #fff; line-height: 1; }
 
-  /* Buttons */
-  .btn {
-    padding: 8px 20px;
-    border-radius: var(--radius-small);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border: none;
+  .ea-edge-side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: space-between;
   }
-  .btn-secondary {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    color: var(--color-text-primary);
+  .ea-edge-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .btn-secondary:hover { background: var(--color-surface-muted); }
-  .btn-primary { background: var(--color-accent); color: white; }
-  .btn-primary:hover { opacity: 0.9; }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-success { background: #4caf50; color: white; }
-  .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-danger { background: #f44336; color: white; }
-
-  /* Info box */
-  .info-box {
+  .ea-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
     background: var(--color-surface-muted);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-medium);
-    padding: 10px 14px;
+    border-radius: 8px;
     font-size: 0.85rem;
   }
-  .info-box.success { border-color: #4caf50; background: rgba(76, 175, 80, 0.1); }
-  .info-box.warning { border-color: #ff9800; background: rgba(255, 152, 0, 0.1); }
-
-  /* Probe status */
+  .ea-kv-label { color: var(--color-text-secondary); font-weight: 500; }
+  .ea-kv-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .ea-probe-actions { display: flex; gap: 10px; }
+  .ea-probe-actions .ea-btn { flex: 1; }
   .ea-probe-status {
     padding: 10px 14px;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-small);
-    background: var(--color-surface);
+    border-radius: 8px;
+    background: var(--color-surface-muted);
     font-size: 0.85rem;
-    min-height: 36px;
+    min-height: 38px;
+    line-height: 1.4;
   }
+  .ea-probe-status.error { border-color: var(--color-danger, #e74c3c); }
+  .ea-probe-status.success { border-color: var(--color-success, #4caf50); }
 
-  /* Results */
+  /* ============ Results ============ */
+  .ea-results-empty {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 12px 0;
+    font-size: 0.9rem;
+  }
   .ea-results-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
   }
   .ea-result-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 10px;
-    background: var(--color-surface);
-    border-radius: var(--radius-small);
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--color-surface-muted);
+    border-radius: 8px;
     border: 1px solid var(--color-border);
   }
-  .ea-result-item.full-width {
-    grid-column: 1 / -1;
-  }
   .ea-result-label {
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 0.72rem;
+    font-weight: 600;
     color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
   .ea-result-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
   }
-  .ea-result-value.highlight {
-    color: var(--color-accent);
-    font-size: 1rem;
-  }
-
-  /* Footer */
-  .plugin-dialog-footer {
-    padding: 12px 20px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-surface);
+  .ea-angle-row {
     display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
   }
+  .ea-angle-label { font-size: 0.9rem; font-weight: 600; color: var(--color-text-primary); }
+  .ea-angle-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .ea-angle-side { font-size: 0.8rem; color: var(--color-text-secondary); }
 
-  /* Toast notifications */
-  .toast-container {
+  /* ============ Toasts + confirm ============ */
+  .ea-toast-container {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -307,59 +625,111 @@
     flex-direction: column;
     gap: 8px;
   }
-  .toast {
+  .ea-toast {
     padding: 12px 20px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: slideIn 0.3s ease;
-    max-width: 300px;
+    animation: eaSlideIn 0.3s ease;
+    max-width: 320px;
+    color: #fff;
   }
-  .toast.success { background: #4caf50; color: white; }
-  .toast.error { background: #f44336; color: white; }
-  .toast.info { background: var(--color-accent); color: white; }
-  .toast.fadeOut { animation: fadeOut 0.3s ease forwards; }
-  @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-
-  /* Confirm dialog */
-  .confirm-overlay {
+  .ea-toast.success { background: var(--color-success, #4caf50); }
+  .ea-toast.error { background: var(--color-danger, #e74c3c); }
+  .ea-toast.info { background: var(--color-accent); }
+  .ea-toast.fadeOut { animation: eaFadeOut 0.3s ease forwards; }
+  @keyframes eaSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes eaFadeOut { from { opacity: 1; } to { opacity: 0; } }
+  .ea-confirm-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.5); z-index: 10001;
     display: flex; align-items: center; justify-content: center;
   }
-  .confirm-box {
+  .ea-confirm-box {
     background: var(--color-surface); border: 1px solid var(--color-border);
-    border-radius: 8px; padding: 24px; max-width: 400px; width: 90%;
+    border-radius: 10px; padding: 24px; max-width: 420px; width: 90%;
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   }
-  .confirm-box .confirm-title {
-    font-size: 1rem; font-weight: 600; margin-bottom: 12px;
-    color: var(--color-text-primary);
-  }
-  .confirm-box .confirm-message {
-    font-size: 0.9rem; color: var(--color-text-secondary);
-    margin-bottom: 20px; line-height: 1.5;
-  }
-  .confirm-box .confirm-actions {
-    display: flex; justify-content: flex-end; gap: 10px;
-  }
+  .ea-confirm-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: var(--color-text-primary); }
+  .ea-confirm-message { font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: 20px; line-height: 1.5; }
+  .ea-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 </style>
 
-<div class="toast-container" id="toastContainer"></div>
+<div class="ea-toast-container" id="ea-toast-container"></div>
 
-<div class="ea-dialog" style="visibility: hidden; min-height: 200px;">
-  <!-- Scrollable content -->
-  <div class="ea-content">
-    <div class="ea-columns">
-      <!-- Left column: Edge Selection + Probe Settings + Probe button -->
-      <div>
-        <div class="form-card" style="display: flex; flex-direction: column;">
-          <div class="form-card-title">Edge Selection & Probe Settings <span class="unit-badge" id="unitBadge">mm</span></div>
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-            <input type="hidden" id="edgeSide" value="left">
+<div class="ea-wrapper" id="ea-wrapper" style="visibility: hidden;">
+  <div class="ea-container">
+    <!-- Sidebar -->
+    <aside class="ea-sidebar">
+      <div class="ea-sidebar-header">
+        <span class="ea-sidebar-eyebrow">ncSender</span>
+        <span class="ea-sidebar-title">Edge Align</span>
+        <span class="ea-units-badge" id="ea-units-badge" style="display: none;"></span>
+      </div>
+      <nav class="ea-sidebar-nav">
+        <button type="button" class="ea-nav-btn active" data-nav="probe">
+          <span class="ea-nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="5" width="16" height="14" rx="2" transform="rotate(-6 12 12)"/>
+              <circle cx="4" cy="9" r="1.6" fill="currentColor" stroke="none"/>
+              <circle cx="5.5" cy="16" r="1.6" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <span class="ea-nav-label">Probe</span>
+          <span class="ea-tab-caret" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="ea-nav-btn" data-nav="settings">
+          <span class="ea-nav-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="ea-nav-label">Settings</span>
+          <span class="ea-tab-caret" aria-hidden="true"></span>
+        </button>
+      </nav>
+      <div class="ea-sidebar-footer">
+        <button type="button" class="ea-close-btn" id="ea-close-btn">Close</button>
+      </div>
+    </aside>
+
+    <!-- ===================== PROBE ===================== -->
+    <section class="ea-content active" data-view="probe">
+      <header class="ea-panel-header">
+        <h2 class="ea-panel-title">Edge Probe</h2>
+        <!-- Machine DRO (left) + Step & Jog (right), pinned above the panel
+             so the operator can position the probe without leaving the tab. -->
+        <div class="ea-header-cards">
+          <div class="ea-header-card">
+            <div class="ea-mcoord">
+              <div class="ea-mcoord-title">Machine Coordinates</div>
+              <div class="ea-mcoord-row">
+                <div class="ea-mcoord-cell"><span class="ea-mcoord-axis">X</span><span class="ea-mcoord-value ea-axis-x">0.000</span></div>
+                <div class="ea-mcoord-cell"><span class="ea-mcoord-axis">Y</span><span class="ea-mcoord-value ea-axis-y">0.000</span></div>
+                <div class="ea-mcoord-cell"><span class="ea-mcoord-axis">Z</span><span class="ea-mcoord-value ea-axis-z">0.000</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="ea-header-card">
+            <div class="ea-jog-controls" id="ea-jog-controls">
+              <nc-step-control></nc-step-control>
+              <nc-jog-control></nc-jog-control>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="ea-panel">
+        <div class="ea-card">
+          <h3 class="ea-card-title">Edge Selection</h3>
+          <p class="ea-card-help">
+            Jog the probe close to the edge you want to measure, pick that edge below, then press Probe. Two points are probed along the edge and the rotation angle is calculated from them.
+          </p>
+          <div class="ea-edge-layout">
             <div class="ea-edge-visual">
+              <input type="hidden" id="edgeSide" value="left">
               <div class="ea-edge-side ea-edge-left active" id="vizEdgeLeft" data-edge="left"></div>
               <div class="ea-edge-side ea-edge-right" id="vizEdgeRight" data-edge="right"></div>
               <div class="ea-edge-side ea-edge-front" id="vizEdgeFront" data-edge="front"></div>
@@ -368,109 +738,107 @@
               <span class="ea-edge-label ea-label-right" data-edge="right">Right</span>
               <span class="ea-edge-label ea-label-front" data-edge="front">Front</span>
               <span class="ea-edge-label ea-label-back" data-edge="back">Back</span>
+              <span class="ea-material-hint">Material</span>
               <div class="ea-dot" id="vizDot1"><span class="ea-dot-label">1</span></div>
               <div class="ea-dot" id="vizDot2"><span class="ea-dot-label">2</span></div>
             </div>
-            <div class="form-row" style="margin-top: 10px;">
-              <div class="form-group">
-                <label id="labelMeasureDist">Measurement Distance</label>
-                <input type="number" id="measureDistance" value="50" min="5" step="1">
+            <div class="ea-edge-side-panel">
+              <div class="ea-edge-summary">
+                <div class="ea-kv"><span class="ea-kv-label">Selected edge</span><span class="ea-kv-value" id="ea-summary-edge">Left</span></div>
+                <div class="ea-kv"><span class="ea-kv-label">Measurement distance</span><span class="ea-kv-value" id="ea-summary-distance">50 mm</span></div>
+                <div class="ea-kv"><span class="ea-kv-label">Max probe distance</span><span class="ea-kv-value" id="ea-summary-maxprobe">20 mm</span></div>
+                <div class="ea-kv"><span class="ea-kv-label">Probe / travel feed</span><span class="ea-kv-value" id="ea-summary-feeds">100 / 2000 mm/min</span></div>
               </div>
-              <div class="form-group">
-                <label id="labelMaxProbe">Max Probe Distance</label>
-                <input type="number" id="maxProbeDistance" value="20" min="1" step="0.1">
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label id="labelProbeFeed">Probe Feed Rate</label>
-                <input type="number" id="probeFeedRate" value="100" min="1" max="1000">
-              </div>
-              <div class="form-group">
-                <label id="labelTravelFeed">Travel Feed Rate</label>
-                <input type="number" id="travelFeedRate" value="2000" min="100" max="5000">
+              <div>
+                <div class="ea-probe-actions">
+                  <button type="button" class="ea-btn ea-btn-wide" id="startProbeBtn">Probe</button>
+                  <button type="button" class="ea-btn ea-btn-danger ea-btn-wide" id="stopProbeBtn" style="display: none;">Stop</button>
+                </div>
+                <div class="ea-probe-status" id="probeStatus" style="display: none; margin-top: 10px;"></div>
               </div>
             </div>
-            <div class="form-row" style="margin-bottom: 0;">
-              <div class="form-group">
-                <label id="labelClearance">Retract Clearance</label>
-                <input type="number" id="clearanceHeight" value="5" min="1" step="0.5">
-              </div>
-              <div class="form-group"></div>
-            </div>
-            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 12px;">
-              <button class="btn btn-danger" id="stopProbeBtn" style="display: none; width: 100%;">Stop</button>
-              <button class="btn btn-primary" id="startProbeBtn" style="width: 100%;">Probe</button>
-            </div>
-            <div class="ea-probe-status" id="probeStatus" style="display: none; margin-top: 10px;"></div>
           </div>
         </div>
-      </div>
 
-      <!-- Right column: Jog Controls + Probe Results -->
-      <div>
-        <div class="form-card ea-jog-card">
-          <div class="form-card-title" style="width: 100%;">Jog Controls</div>
-          <div class="ea-axis-values">
-            <div class="ea-axis-item">
-              <span class="ea-axis-label">X</span>
-              <span class="ea-axis-value" id="ea-axis-x">0.000</span>
-            </div>
-            <div class="ea-axis-item">
-              <span class="ea-axis-label">Y</span>
-              <span class="ea-axis-value" id="ea-axis-y">0.000</span>
-            </div>
-            <div class="ea-axis-item">
-              <span class="ea-axis-label">Z</span>
-              <span class="ea-axis-value" id="ea-axis-z">0.000</span>
-            </div>
-          </div>
-          <nc-step-control></nc-step-control>
-          <nc-jog-control></nc-jog-control>
-        </div>
-
-        <!-- Probe Results -->
-        <div class="form-card" style="display: flex; flex-direction: column;">
-          <div class="form-card-title">Probe Results</div>
-          <div id="resultsEmpty" style="text-align: center; color: var(--color-text-secondary); padding: 8px 0; font-size: 0.85rem;">
-            No probe data yet.
-          </div>
-          <div id="resultsData" style="display: none;">
+        <div class="ea-card">
+          <h3 class="ea-card-title">Probe Results</h3>
+          <div class="ea-results-empty" id="resultsEmpty">No probe data yet.</div>
+          <div id="resultsData" style="display: none; flex-direction: column; gap: 10px;">
             <div class="ea-results-grid">
-              <div class="ea-result-item">
-                <span class="ea-result-label">Point 1 X</span>
-                <span class="ea-result-value" id="resultP1X">-</span>
-              </div>
-              <div class="ea-result-item">
-                <span class="ea-result-label">Point 1 Y</span>
-                <span class="ea-result-value" id="resultP1Y">-</span>
-              </div>
-              <div class="ea-result-item">
-                <span class="ea-result-label">Point 2 X</span>
-                <span class="ea-result-value" id="resultP2X">-</span>
-              </div>
-              <div class="ea-result-item">
-                <span class="ea-result-label">Point 2 Y</span>
-                <span class="ea-result-value" id="resultP2Y">-</span>
-              </div>
-              <div class="ea-result-item full-width" style="padding: 10px;">
-                <span class="ea-result-label" style="font-size: 0.9rem; font-weight: 600;">Rotation Angle</span>
-                <span class="ea-result-value highlight" id="resultAngle">-</span>
-              </div>
+              <div class="ea-result-item"><span class="ea-result-label">Point 1 X</span><span class="ea-result-value" id="resultP1X">-</span></div>
+              <div class="ea-result-item"><span class="ea-result-label">Point 1 Y</span><span class="ea-result-value" id="resultP1Y">-</span></div>
+              <div class="ea-result-item"><span class="ea-result-label">Point 2 X</span><span class="ea-result-value" id="resultP2X">-</span></div>
+              <div class="ea-result-item"><span class="ea-result-label">Point 2 Y</span><span class="ea-result-value" id="resultP2Y">-</span></div>
             </div>
-            <div style="display: flex; justify-content: center; margin-top: 10px;">
-              <button class="btn btn-success" id="applyBtn" style="display: none;">Apply Rotation</button>
+            <div class="ea-angle-row">
+              <div>
+                <div class="ea-angle-label">Rotation Angle</div>
+                <div class="ea-angle-side" id="resultEdge">Left edge</div>
+              </div>
+              <span class="ea-angle-value" id="resultAngle">-</span>
+              <button type="button" class="ea-btn ea-btn-success ea-btn-wide" id="applyBtn">Apply Rotation</button>
+            </div>
+            <p class="ea-card-help">
+              Apply Rotation writes a rotated copy of the loaded program and loads it. The original file is kept; use "Reset to Original" in the visualizer to go back.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <footer class="ea-panel-footer">
+        <button type="button" class="ea-btn ea-btn-danger" id="unlockBtn" style="display: none;" title="Soft reset, then $X">Unlock</button>
+        <span class="ea-footer-spacer"></span>
+        <button type="button" class="ea-btn ea-btn-ghost" id="ea-clear-results" style="display: none;">Clear Results</button>
+      </footer>
+    </section>
+
+    <!-- ===================== SETTINGS ===================== -->
+    <section class="ea-content" data-view="settings">
+      <header class="ea-panel-header">
+        <h2 class="ea-panel-title">Probe Settings</h2>
+      </header>
+
+      <div class="ea-panel">
+        <div class="ea-card">
+          <h3 class="ea-card-title">Distances</h3>
+          <p class="ea-card-help">
+            A longer measurement distance gives a more accurate angle. Max probe distance limits how far the probe travels toward the edge before giving up.
+          </p>
+          <div class="ea-row-3">
+            <div class="ea-field">
+              <label for="measureDistance" id="labelMeasureDist">Measurement Distance</label>
+              <input type="number" class="ea-input" id="measureDistance" value="50" min="5" step="1">
+            </div>
+            <div class="ea-field">
+              <label for="maxProbeDistance" id="labelMaxProbe">Max Probe Distance</label>
+              <input type="number" class="ea-input" id="maxProbeDistance" value="20" min="1" step="0.1">
+            </div>
+            <div class="ea-field">
+              <label for="clearanceHeight" id="labelClearance">Retract Clearance</label>
+              <input type="number" class="ea-input" id="clearanceHeight" value="5" min="1" step="0.5">
+            </div>
+          </div>
+        </div>
+
+        <div class="ea-card">
+          <h3 class="ea-card-title">Feed Rates</h3>
+          <p class="ea-card-help">
+            Probe feed is the speed toward the edge. Travel feed is used to retract and to move between the two probe points; that move is a G38.3 probe-away so an unexpected contact stops it.
+          </p>
+          <div class="ea-row-2">
+            <div class="ea-field">
+              <label for="probeFeedRate" id="labelProbeFeed">Probe Feed Rate</label>
+              <input type="number" class="ea-input" id="probeFeedRate" value="100" min="1" max="1000">
+            </div>
+            <div class="ea-field">
+              <label for="travelFeedRate" id="labelTravelFeed">Travel Feed Rate</label>
+              <input type="number" class="ea-input" id="travelFeedRate" value="2000" min="100" max="5000">
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Sticky footer -->
-  <div class="plugin-dialog-footer">
-    <button class="btn btn-secondary" onclick="window.postMessage({ type: 'close-plugin-dialog' }, '*')">Close</button>
-    <button class="btn btn-danger" id="unlockBtn" style="display: none;" title="Clear alarm and unlock machine">Unlock</button>
+    </section>
   </div>
 </div>
 
@@ -482,6 +850,9 @@
 
   var API_BASE = window.location.origin || ('http://localhost:' + SERVER_PORT);
   var PLUGIN_ID = 'com.ncsender.edgealign';
+
+  function $(id) { return document.getElementById(id); }
+  function qsa(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
 
   // Unit conversion
   var INCH_TO_MM = 25.4;
@@ -499,15 +870,14 @@
   var stopProbing = false;
   var hasGcode = false;
   var currentFilename = null;
-  var originalFilename = null; // the non-temp source file
+  var originalFilename = null;   // the non-temp source file
+  var currentIsTemporary = false; // the loaded job is a rotated copy already
 
   // --- API helpers ---
   function saveSettings(newSettings) {
     return loadSettings().then(function(existing) {
       var merged = existing || {};
-      for (var key in newSettings) {
-        merged[key] = newSettings[key];
-      }
+      for (var key in newSettings) merged[key] = newSettings[key];
       return fetch(API_BASE + '/api/plugins/' + PLUGIN_ID + '/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -525,13 +895,10 @@
     return fetch(API_BASE + '/api/send-command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        command: cmd,
-        meta: { sourceId: 'plugin', plugin: PLUGIN_ID }
-      })
+      body: JSON.stringify({ command: cmd, meta: { sourceId: 'plugin', plugin: PLUGIN_ID } })
     }).then(function(r) { return r.json(); }).then(function(result) {
       if (result.error || result.success === false) {
-        var errorMsg = result.error?.message || result.error || 'Unknown error';
+        var errorMsg = (result.error && result.error.message) || result.error || 'Unknown error';
         throw new Error('Command failed: ' + errorMsg);
       }
       return result;
@@ -539,24 +906,46 @@
   }
 
   function getServerState() {
-    return fetch(API_BASE + '/api/server-state')
-      .then(function(r) { return r.json(); });
+    return fetch(API_BASE + '/api/server-state').then(function(r) { return r.json(); });
   }
 
   function getInitState() {
-    return fetch(API_BASE + '/api/init')
-      .then(function(r) { return r.json(); });
+    return fetch(API_BASE + '/api/init').then(function(r) { return r.json(); });
+  }
+
+  // Fetch a library file's content, or null when the server can't find it.
+  // A miss answers 404 with a JSON string body, so r.json() "succeeds" and
+  // .content is undefined — that was the "reading 'split'" crash users hit
+  // with programs loaded from outside the G-code library.
+  function fetchLibraryFile(path) {
+    return fetch(API_BASE + '/api/gcode-files/file?path=' + encodeURIComponent(path))
+      .then(function(r) {
+        if (!r.ok) return null;
+        return r.json().then(function(data) {
+          return (data && typeof data.content === 'string') ? data.content : null;
+        }).catch(function() { return null; });
+      }).catch(function() { return null; });
+  }
+
+  function downloadCurrent() {
+    return fetch(API_BASE + '/api/gcode-files/current/download').then(function(r) {
+      if (!r.ok) throw new Error('No G-code program is loaded');
+      return r.text();
+    });
   }
 
   function downloadGCode() {
-    // Always download the original source file, not the temp version
-    if (originalFilename) {
-      return fetch(API_BASE + '/api/gcode-files/file?path=' + encodeURIComponent(originalFilename))
-        .then(function(r) { return r.json(); })
-        .then(function(data) { return data.content; });
-    }
-    return fetch(API_BASE + '/api/gcode-files/current/download')
-      .then(function(r) { return r.text(); });
+    // Rotate from the original source file so rotations never stack. If the
+    // original isn't in the library (loaded from a drive, a plugin, a
+    // one-off path) the currently loaded program IS the original unless it
+    // is already a rotated copy.
+    var lookup = originalFilename ? fetchLibraryFile(originalFilename) : Promise.resolve(null);
+    return lookup.then(function(content) {
+      if (typeof content === 'string') return content;
+      if (!currentIsTemporary) return downloadCurrent();
+      throw new Error('The original program "' + originalFilename +
+        '" is no longer available. Reload the original file, then apply the rotation again.');
+    });
   }
 
   function loadTempGCode(content, filename, sourceFile) {
@@ -568,17 +957,16 @@
   }
 
   function getAppSettings() {
-    return fetch(API_BASE + '/api/settings')
-      .then(function(r) { return r.json(); });
+    return fetch(API_BASE + '/api/settings').then(function(r) { return r.json(); });
   }
 
-  // --- Toast ---
+  // --- Toast + confirm ---
   function showToast(message, type, duration) {
     type = type || 'info';
     duration = duration || 3000;
-    var container = document.getElementById('toastContainer');
+    var container = $('ea-toast-container');
     var toast = document.createElement('div');
-    toast.className = 'toast ' + type;
+    toast.className = 'ea-toast ' + type;
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(function() {
@@ -587,21 +975,24 @@
     }, duration);
   }
 
-  function showConfirm(title, message, onConfirm) {
+  function showConfirm(title, message, onConfirm, okLabel) {
     var overlay = document.createElement('div');
-    overlay.className = 'confirm-overlay';
+    overlay.className = 'ea-confirm-overlay';
     overlay.innerHTML =
-      '<div class="confirm-box">' +
-        '<div class="confirm-title">' + title + '</div>' +
-        '<div class="confirm-message">' + message + '</div>' +
-        '<div class="confirm-actions">' +
-          '<button class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>' +
-          '<button class="btn btn-danger" id="confirmOkBtn">Confirm</button>' +
+      '<div class="ea-confirm-box">' +
+        '<div class="ea-confirm-title"></div>' +
+        '<div class="ea-confirm-message"></div>' +
+        '<div class="ea-confirm-actions">' +
+          '<button type="button" class="ea-btn ea-btn-ghost" data-act="cancel">Cancel</button>' +
+          '<button type="button" class="ea-btn" data-act="ok"></button>' +
         '</div>' +
       '</div>';
+    overlay.querySelector('.ea-confirm-title').textContent = title;
+    overlay.querySelector('.ea-confirm-message').textContent = message;
+    overlay.querySelector('[data-act="ok"]').textContent = okLabel || 'OK';
     document.body.appendChild(overlay);
-    overlay.querySelector('#confirmCancelBtn').onclick = function() { overlay.remove(); };
-    overlay.querySelector('#confirmOkBtn').onclick = function() { overlay.remove(); onConfirm(); };
+    overlay.querySelector('[data-act="cancel"]').onclick = function() { overlay.remove(); };
+    overlay.querySelector('[data-act="ok"]').onclick = function() { overlay.remove(); if (onConfirm) onConfirm(); };
     overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
   }
 
@@ -630,16 +1021,10 @@
           getServerState().then(function(state) {
             var ms = state && state.machineState;
             var status = ms && ms.status;
-            if (status === 'Idle') {
-              resolve(true);
-            } else if (status === 'Alarm') {
-              reject(new Error('Machine in alarm state'));
-            } else {
-              check();
-            }
-          }).catch(function() {
-            check();
-          });
+            if (status === 'Idle') resolve(true);
+            else if (status === 'Alarm') reject(new Error('Machine in alarm state'));
+            else check();
+          }).catch(function() { check(); });
         }, 100);
       }
       check();
@@ -647,9 +1032,7 @@
   }
 
   function queryProbeResult() {
-    return waitForIdle().then(function() {
-      return getServerState();
-    }).then(function(state) {
+    return waitForIdle().then(function() { return getServerState(); }).then(function(state) {
       var ms = (state && state.machineState) || (state && state.cnc && state.cnc.machineState);
       if (!ms) return null;
 
@@ -661,28 +1044,22 @@
         var wpos = parsePositionString(wposStr);
         if (wpos) return { x: wpos.x, y: wpos.y, z: wpos.z, success: true };
       }
-
       if (mposStr && wcoStr) {
         var mpos = parsePositionString(mposStr);
         var wco = parsePositionString(wcoStr);
-        if (mpos && wco) {
-          return { x: mpos.x - wco.x, y: mpos.y - wco.y, z: mpos.z - wco.z, success: true };
-        }
+        if (mpos && wco) return { x: mpos.x - wco.x, y: mpos.y - wco.y, z: mpos.z - wco.z, success: true };
       }
-
       if (mposStr) {
-        var mpos = parsePositionString(mposStr);
-        if (mpos) return { x: mpos.x, y: mpos.y, z: mpos.z, success: true };
+        var mpos2 = parsePositionString(mposStr);
+        if (mpos2) return { x: mpos2.x, y: mpos2.y, z: mpos2.z, success: true };
       }
-
       return null;
     });
   }
 
-  // --- Coordinate display (real-time) ---
+  // --- Coordinate display (real-time, machine coordinates) ---
   function extractCoordinatesFromPayload(payload) {
     if (!payload || typeof payload !== 'object') return null;
-
     var nestedKeys = ['machineState', 'lastStatus', 'statusReport'];
     for (var i = 0; i < nestedKeys.length; i++) {
       var key = nestedKeys[i];
@@ -691,13 +1068,11 @@
         if (nestedCoords) return nestedCoords;
       }
     }
-
     var candidates = [payload.machineCoords, payload.MPos, payload.MPOS, payload.mpos, payload.machinePosition];
     for (var j = 0; j < candidates.length; j++) {
       var coords = parsePositionString(candidates[j]);
       if (coords) return coords;
     }
-
     return null;
   }
 
@@ -709,45 +1084,69 @@
     return num.toFixed(3);
   }
 
-  function updateAxisDisplay(coords) {
-    if (!coords) return;
-    var axisX = document.getElementById('ea-axis-x');
-    var axisY = document.getElementById('ea-axis-y');
-    var axisZ = document.getElementById('ea-axis-z');
-    if (axisX && coords.x !== undefined) axisX.textContent = formatCoordinate(coords.x);
-    if (axisY && coords.y !== undefined) axisY.textContent = formatCoordinate(coords.y);
-    if (axisZ && coords.z !== undefined) axisZ.textContent = formatCoordinate(coords.z);
+  function setAxis(cls, value) {
+    var text = formatCoordinate(value);
+    qsa('.' + cls).forEach(function(el) { el.textContent = text; });
   }
 
-  function handleServerStateUpdate(event) {
+  function updateAxisDisplay(coords) {
+    if (!coords) return;
+    if (coords.x !== undefined) setAxis('ea-axis-x', coords.x);
+    if (coords.y !== undefined) setAxis('ea-axis-y', coords.y);
+    if (coords.z !== undefined) setAxis('ea-axis-z', coords.z);
+  }
+
+  function statusFromState(state) {
+    if (!state) return null;
+    if (state.machineState) return state.machineState.status;
+    if (state.lastStatus) return state.lastStatus.status;
+    return state.status || null;
+  }
+
+  function setUnlockVisible(visible) {
+    var btn = $('unlockBtn');
+    if (btn) btn.style.display = visible ? '' : 'none';
+  }
+
+  window.addEventListener('message', function(event) {
     if (!event.data || event.data.type !== 'server-state-update') return;
     var coords = extractCoordinatesFromPayload(event.data.state);
     if (coords) updateAxisDisplay(coords);
+    var status = statusFromState(event.data.state);
+    if (status === 'Alarm') setUnlockVisible(true);
+    else if (status) setUnlockVisible(false);
+  });
+
+  function checkAlarmState() {
+    getServerState().then(function(state) {
+      setUnlockVisible(statusFromState(state) === 'Alarm');
+    }).catch(function() {});
   }
 
   // --- Edge visual ---
+  var EDGE_NAMES = { left: 'Left', right: 'Right', front: 'Front', back: 'Back' };
+
   function selectEdge(side) {
-    document.getElementById('edgeSide').value = side;
+    $('edgeSide').value = side;
     updateEdgeVisual();
+    updateSummary();
+    autoSave();
   }
 
   function updateEdgeVisual() {
-    var side = document.getElementById('edgeSide').value;
-    var sides = ['left', 'right', 'front', 'back'];
-    sides.forEach(function(s) {
-      var el = document.getElementById('vizEdge' + s.charAt(0).toUpperCase() + s.slice(1));
+    var side = $('edgeSide').value;
+    ['left', 'right', 'front', 'back'].forEach(function(s) {
+      var el = $('vizEdge' + s.charAt(0).toUpperCase() + s.slice(1));
       if (el) el.classList.toggle('active', s === side);
     });
-    // Highlight active label
-    document.querySelectorAll('.ea-edge-label').forEach(function(lbl) {
+    qsa('.ea-edge-label').forEach(function(lbl) {
       lbl.classList.toggle('active', lbl.getAttribute('data-edge') === side);
     });
 
-    var dot1 = document.getElementById('vizDot1');
-    var dot2 = document.getElementById('vizDot2');
+    var dot1 = $('vizDot1');
+    var dot2 = $('vizDot2');
     dot1.classList.add('visible');
     dot2.classList.add('visible');
-
     if (side === 'left') {
       dot1.style.cssText = 'left: -1px; top: 25%; transform: translate(-50%, -50%);';
       dot2.style.cssText = 'left: -1px; top: 75%; transform: translate(-50%, -50%);';
@@ -763,39 +1162,34 @@
     }
   }
 
-  // --- UI state during probing ---
-  function setControlsEnabled(enabled) {
-    var inputs = document.querySelectorAll('.ea-dialog input, .ea-dialog select');
-    inputs.forEach(function(el) { el.disabled = !enabled; });
-    var applyBtn = document.getElementById('applyBtn');
-    if (applyBtn) applyBtn.disabled = !enabled;
-    // Disable jog/step web components
-    var jogEl = document.querySelector('nc-jog-control');
-    var stepEl = document.querySelector('nc-step-control');
-    if (jogEl) jogEl.style.pointerEvents = enabled ? '' : 'none';
-    if (stepEl) stepEl.style.pointerEvents = enabled ? '' : 'none';
-    if (jogEl) jogEl.style.opacity = enabled ? '' : '0.4';
-    if (stepEl) stepEl.style.opacity = enabled ? '' : '0.4';
+  // The Probe tab shows a read-only summary of the values that live on the
+  // Settings tab, so the operator sees what a Probe press will use.
+  function fmtNum(v) {
+    var n = parseFloat(v);
+    if (isNaN(n)) return '-';
+    return (Math.round(n * 1000) / 1000).toString();
+  }
+  function updateSummary() {
+    $('ea-summary-edge').textContent = EDGE_NAMES[$('edgeSide').value] || '-';
+    $('ea-summary-distance').textContent = fmtNum($('measureDistance').value) + ' ' + distanceUnit;
+    $('ea-summary-maxprobe').textContent = fmtNum($('maxProbeDistance').value) + ' ' + distanceUnit;
+    $('ea-summary-feeds').textContent = fmtNum($('probeFeedRate').value) + ' / ' + fmtNum($('travelFeedRate').value) + ' ' + feedUnit;
   }
 
-  // --- Alarm state tracking ---
-  function checkAlarmState() {
-    getServerState().then(function(state) {
-      var ms = state && state.machineState;
-      var status = ms && ms.status;
-      var unlockBtn = document.getElementById('unlockBtn');
-      if (status === 'Alarm') {
-        unlockBtn.style.display = '';
-      } else {
-        unlockBtn.style.display = 'none';
-      }
-    }).catch(function() {});
+  // --- UI state during probing ---
+  function setControlsEnabled(enabled) {
+    qsa('.ea-content input').forEach(function(el) { el.disabled = !enabled; });
+    var applyBtn = $('applyBtn');
+    if (applyBtn) applyBtn.disabled = !enabled;
+    $('ea-jog-controls').classList.toggle('disabled', !enabled);
+    qsa('.ea-nav-btn').forEach(function(b) { b.disabled = !enabled; });
   }
 
   // --- Probing sequence ---
-  function setStatus(msg) {
-    var el = document.getElementById('probeStatus');
+  function setStatus(msg, kind) {
+    var el = $('probeStatus');
     el.textContent = msg;
+    el.className = 'ea-probe-status' + (kind ? ' ' + kind : '');
     el.style.display = msg ? '' : 'none';
   }
 
@@ -804,33 +1198,29 @@
     isProbing = true;
     stopProbing = false;
 
-    var startBtn = document.getElementById('startProbeBtn');
-    var stopBtn = document.getElementById('stopProbeBtn');
+    var startBtn = $('startProbeBtn');
+    var stopBtn = $('stopProbeBtn');
     startBtn.style.display = 'none';
     stopBtn.style.display = '';
     setControlsEnabled(false);
 
-    // Auto-save settings
+    // Auto-save settings so a probe never runs with values the operator
+    // forgot to save.
     saveSettings(collectSettings()).catch(function() {});
 
-    var side = document.getElementById('edgeSide').value;
-    var distance = convertToMetric(parseFloat(document.getElementById('measureDistance').value));
-    var probeFeed = convertToMetric(parseFloat(document.getElementById('probeFeedRate').value));
-    var travelFeed = convertToMetric(parseFloat(document.getElementById('travelFeedRate').value));
-    var clearance = convertToMetric(parseFloat(document.getElementById('clearanceHeight').value));
-    var maxProbe = convertToMetric(parseFloat(document.getElementById('maxProbeDistance').value));
+    var side = $('edgeSide').value;
+    var distance = convertToMetric(parseFloat($('measureDistance').value));
+    var probeFeed = convertToMetric(parseFloat($('probeFeedRate').value));
+    var travelFeed = convertToMetric(parseFloat($('travelFeedRate').value));
+    var clearance = convertToMetric(parseFloat($('clearanceHeight').value));
+    var maxProbe = convertToMetric(parseFloat($('maxProbeDistance').value));
 
     try {
       var probeAxis, probeDir, travelAxis;
-      if (side === 'left') {
-        probeAxis = 'X'; probeDir = 1; travelAxis = 'Y';
-      } else if (side === 'right') {
-        probeAxis = 'X'; probeDir = -1; travelAxis = 'Y';
-      } else if (side === 'front') {
-        probeAxis = 'Y'; probeDir = 1; travelAxis = 'X';
-      } else {
-        probeAxis = 'Y'; probeDir = -1; travelAxis = 'X';
-      }
+      if (side === 'left')       { probeAxis = 'X'; probeDir = 1;  travelAxis = 'Y'; }
+      else if (side === 'right') { probeAxis = 'X'; probeDir = -1; travelAxis = 'Y'; }
+      else if (side === 'front') { probeAxis = 'Y'; probeDir = 1;  travelAxis = 'X'; }
+      else                       { probeAxis = 'Y'; probeDir = -1; travelAxis = 'X'; }
 
       await sendCommand('G91');
       await waitForIdle();
@@ -848,7 +1238,7 @@
       await waitForIdle();
       if (stopProbing) throw new Error('Stopped by user');
 
-      // Travel to Point 2 (G38.4 probe-away: stops with alarm if unexpected contact)
+      // Travel to Point 2 (G38.3 probe-away: stops if it hits something)
       setStatus('Traveling to Point 2 position...');
       await sendCommand('G38.3 ' + travelAxis + distance.toFixed(3) + ' F' + travelFeed.toFixed(0));
       await waitForIdle();
@@ -869,39 +1259,28 @@
       await sendCommand('G90');
       await waitForIdle();
 
-      // Calculate angle — factor in probe direction so all sides report consistent angle
+      // Angle — factor in probe direction so every side reports the same sign
       var deviation, angle;
       if (probeAxis === 'X') {
-        // Left/Right: deviation in X over travel in Y
         deviation = (p2.x - p1.x) * -probeDir;
         angle = Math.atan2(deviation, distance);
       } else {
-        // Front/Back: deviation in Y over travel in X
         deviation = (p2.y - p1.y) * probeDir;
         angle = Math.atan2(deviation, distance);
       }
-
       var angleDeg = angle * (180 / Math.PI);
 
-      probeResult = {
-        point1: p1,
-        point2: p2,
-        edge: side,
-        distance: distance,
-        angle: angle,
-        angleDeg: angleDeg
-      };
+      probeResult = { point1: p1, point2: p2, edge: side, distance: distance, angle: angle, angleDeg: angleDeg };
 
       showResults();
-      setStatus('Probing complete! Angle: ' + angleDeg.toFixed(4) + '\u00B0');
-      showToast('Probing complete: ' + angleDeg.toFixed(4) + '\u00B0', 'success');
+      setStatus('Probing complete. Angle: ' + angleDeg.toFixed(4) + '°', 'success');
+      showToast('Probing complete: ' + angleDeg.toFixed(4) + '°', 'success');
 
       // Persist probe result
       saveSettings(collectSettings()).catch(function() {});
-
     } catch (err) {
       try { await sendCommand('G90'); } catch (e) {}
-      setStatus('Error: ' + err.message);
+      setStatus('Error: ' + err.message, 'error');
       showToast(err.message, 'error', 5000);
     } finally {
       isProbing = false;
@@ -915,41 +1294,59 @@
   // --- Results display ---
   function showResults() {
     if (!probeResult) return;
-    document.getElementById('resultsEmpty').style.display = 'none';
-    document.getElementById('resultsData').style.display = '';
-    document.getElementById('applyBtn').style.display = '';
+    $('resultsEmpty').style.display = 'none';
+    $('resultsData').style.display = 'flex';
+    $('ea-clear-results').style.display = '';
 
     var p1 = probeResult.point1;
     var p2 = probeResult.point2;
-    document.getElementById('resultP1X').textContent = convertToDisplay(p1.x).toFixed(3);
-    document.getElementById('resultP1Y').textContent = convertToDisplay(p1.y).toFixed(3);
-    document.getElementById('resultP2X').textContent = convertToDisplay(p2.x).toFixed(3);
-    document.getElementById('resultP2Y').textContent = convertToDisplay(p2.y).toFixed(3);
-    document.getElementById('resultAngle').textContent =
-      probeResult.angleDeg.toFixed(4) + '\u00B0';
+    $('resultP1X').textContent = convertToDisplay(p1.x).toFixed(3);
+    $('resultP1Y').textContent = convertToDisplay(p1.y).toFixed(3);
+    $('resultP2X').textContent = convertToDisplay(p2.x).toFixed(3);
+    $('resultP2Y').textContent = convertToDisplay(p2.y).toFixed(3);
+    $('resultAngle').textContent = probeResult.angleDeg.toFixed(4) + '°';
+    $('resultEdge').textContent = (EDGE_NAMES[probeResult.edge] || '') + ' edge';
 
     checkGcodeForApply();
+  }
 
-    // Scroll results into view
-    document.getElementById('resultsData').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  function clearResults() {
+    probeResult = null;
+    $('resultsEmpty').style.display = '';
+    $('resultsData').style.display = 'none';
+    $('ea-clear-results').style.display = 'none';
+    setStatus('');
+    loadSettings().then(function(existing) {
+      var merged = existing || {};
+      delete merged.lastProbeResult;
+      return fetch(API_BASE + '/api/plugins/' + PLUGIN_ID + '/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merged)
+      });
+    }).catch(function() {});
   }
 
   function checkGcodeForApply() {
     getInitState().then(function(data) {
       var state = data && data.serverState;
       var jobLoaded = state && state.jobLoaded;
-      if (jobLoaded && jobLoaded.filename) {
-        hasGcode = true;
-        currentFilename = jobLoaded.filename;
-        if (jobLoaded.isTemporary && jobLoaded.sourceFile) {
-          originalFilename = jobLoaded.sourceFile;
-        } else {
-          originalFilename = jobLoaded.filename;
-        }
-      } else {
-        hasGcode = false;
-      }
+      rememberJob(jobLoaded);
     }).catch(function() {});
+  }
+
+  function rememberJob(jobLoaded) {
+    if (jobLoaded && jobLoaded.filename) {
+      hasGcode = true;
+      currentFilename = jobLoaded.filename;
+      currentIsTemporary = !!jobLoaded.isTemporary;
+      originalFilename = (jobLoaded.isTemporary && jobLoaded.sourceFile) ? jobLoaded.sourceFile : jobLoaded.filename;
+    } else {
+      hasGcode = false;
+      currentFilename = null;
+      currentIsTemporary = false;
+      originalFilename = null;
+    }
   }
 
   // --- G-code rotation ---
@@ -960,8 +1357,9 @@
     var cosA = Math.cos(angle);
     var sinA = Math.sin(angle);
 
-    document.getElementById('applyBtn').disabled = true;
-    document.getElementById('applyBtn').textContent = 'Applying...';
+    var applyBtn = $('applyBtn');
+    applyBtn.disabled = true;
+    applyBtn.textContent = 'Applying...';
 
     downloadGCode().then(function(gcodeContent) {
       var lines = gcodeContent.split('\n');
@@ -992,33 +1390,23 @@
         if (hasMotion && xMatch && isAbsolute) {
           var newLine = line;
           var xVal = null, yVal = null;
-
           var xm = line.match(/X([+-]?\d*\.?\d+)/i);
           var ym = line.match(/Y([+-]?\d*\.?\d+)/i);
-
           if (xm) xVal = parseFloat(xm[1]);
           if (ym) yVal = parseFloat(ym[1]);
 
           var origX = xVal !== null ? xVal : currentX;
           var origY = yVal !== null ? yVal : currentY;
-
           var newX = origX * cosA - origY * sinA;
           var newY = origX * sinA + origY * cosA;
 
-          // Replace existing axes
-          if (xVal !== null) {
-            newLine = newLine.replace(/X[+-]?\d*\.?\d+/i, 'X' + newX.toFixed(4));
-          }
-          if (yVal !== null) {
-            newLine = newLine.replace(/Y[+-]?\d*\.?\d+/i, 'Y' + newY.toFixed(4));
-          }
+          if (xVal !== null) newLine = newLine.replace(/X[+-]?\d*\.?\d+/i, 'X' + newX.toFixed(4));
+          if (yVal !== null) newLine = newLine.replace(/Y[+-]?\d*\.?\d+/i, 'Y' + newY.toFixed(4));
 
-          // Add missing axis — rotation requires both to be correct
+          // Add the missing axis — rotation needs both to be correct
           if (xVal !== null && yVal === null) {
-            // Line has X only — insert Y after X value
             newLine = newLine.replace(/(X[+-]?\d*\.?\d+)/i, '$1 Y' + newY.toFixed(4));
           } else if (yVal !== null && xVal === null) {
-            // Line has Y only — insert X before Y value
             newLine = newLine.replace(/(Y[+-]?\d*\.?\d+)/i, 'X' + newX.toFixed(4) + ' $1');
           }
 
@@ -1037,14 +1425,12 @@
               if (jm) newLine = newLine.replace(/J[+-]?\d*\.?\d+/i, 'J' + newJ.toFixed(4));
             }
           }
-
           rotatedLines.push(newLine);
         } else {
           var xm2 = trimmed.match(/X([+-]?\d*\.?\d+)/);
           var ym2 = trimmed.match(/Y([+-]?\d*\.?\d+)/);
           if (xm2 && isAbsolute) currentX = parseFloat(xm2[1]);
           if (ym2 && isAbsolute) currentY = parseFloat(ym2[1]);
-
           rotatedLines.push(line);
         }
       }
@@ -1054,43 +1440,40 @@
       var baseName = srcName.replace(/\.[^.]+$/, '');
       var ext = srcName.match(/\.[^.]+$/) ? srcName.match(/\.[^.]+$/)[0] : '.nc';
       var newFilename = baseName + '_rotated' + ext;
-
       return loadTempGCode(rotatedContent, newFilename, srcName);
     }).then(function() {
-      showToast('Rotation applied! File loaded: ' + currentFilename.replace(/\.[^.]+$/, '') + '_rotated', 'success', 5000);
-      document.getElementById('applyBtn').textContent = 'Apply Rotation';
-      document.getElementById('applyBtn').disabled = false;
+      showToast('Rotation applied. Loaded: ' + currentFilename.replace(/\.[^.]+$/, '') + '_rotated', 'success', 5000);
+      applyBtn.textContent = 'Apply Rotation';
+      applyBtn.disabled = false;
     }).catch(function(err) {
       showToast('Failed to apply rotation: ' + err.message, 'error', 5000);
-      document.getElementById('applyBtn').textContent = 'Apply Rotation';
-      document.getElementById('applyBtn').disabled = false;
+      applyBtn.textContent = 'Apply Rotation';
+      applyBtn.disabled = false;
     });
   }
 
   // --- Settings ---
   function collectSettings() {
     var settings = {
-      edgeSide: document.getElementById('edgeSide').value,
-      measureDistance: parseFloat(document.getElementById('measureDistance').value),
-      probeFeedRate: parseFloat(document.getElementById('probeFeedRate').value),
-      travelFeedRate: parseFloat(document.getElementById('travelFeedRate').value),
-      clearanceHeight: parseFloat(document.getElementById('clearanceHeight').value),
-      maxProbeDistance: parseFloat(document.getElementById('maxProbeDistance').value)
+      edgeSide: $('edgeSide').value,
+      measureDistance: parseFloat($('measureDistance').value),
+      probeFeedRate: parseFloat($('probeFeedRate').value),
+      travelFeedRate: parseFloat($('travelFeedRate').value),
+      clearanceHeight: parseFloat($('clearanceHeight').value),
+      maxProbeDistance: parseFloat($('maxProbeDistance').value)
     };
-    if (probeResult) {
-      settings.lastProbeResult = probeResult;
-    }
+    if (probeResult) settings.lastProbeResult = probeResult;
     return settings;
   }
 
   function applySettings(settings) {
     if (!settings) return;
-    if (settings.edgeSide) document.getElementById('edgeSide').value = settings.edgeSide;
-    if (settings.measureDistance) document.getElementById('measureDistance').value = settings.measureDistance;
-    if (settings.probeFeedRate) document.getElementById('probeFeedRate').value = settings.probeFeedRate;
-    if (settings.travelFeedRate) document.getElementById('travelFeedRate').value = settings.travelFeedRate;
-    if (settings.clearanceHeight) document.getElementById('clearanceHeight').value = settings.clearanceHeight;
-    if (settings.maxProbeDistance) document.getElementById('maxProbeDistance').value = settings.maxProbeDistance;
+    if (settings.edgeSide) $('edgeSide').value = settings.edgeSide;
+    if (settings.measureDistance) $('measureDistance').value = settings.measureDistance;
+    if (settings.probeFeedRate) $('probeFeedRate').value = settings.probeFeedRate;
+    if (settings.travelFeedRate) $('travelFeedRate').value = settings.travelFeedRate;
+    if (settings.clearanceHeight) $('clearanceHeight').value = settings.clearanceHeight;
+    if (settings.maxProbeDistance) $('maxProbeDistance').value = settings.maxProbeDistance;
     if (settings.lastProbeResult) {
       probeResult = settings.lastProbeResult;
       showResults();
@@ -1098,22 +1481,72 @@
     }
   }
 
+  // Settings save themselves: on a valid input losing focus, on an edge
+  // pick, before a probe, and on Close. No Save button, no prompt.
+  var SETTING_INPUTS = ['measureDistance', 'maxProbeDistance', 'clearanceHeight', 'probeFeedRate', 'travelFeedRate'];
+  var lastGoodValues = {};
+
+  function inputIsValid(el) {
+    var v = parseFloat(el.value);
+    if (!isFinite(v)) return false;
+    var min = parseFloat(el.min), max = parseFloat(el.max);
+    if (isFinite(min) && v < min) return false;
+    if (isFinite(max) && v > max) return false;
+    return true;
+  }
+
+  function rememberGoodValues() {
+    SETTING_INPUTS.forEach(function(id) { lastGoodValues[id] = $(id).value; });
+  }
+
+  var saveTimer = null;
+  function autoSave() {
+    // Coalesce bursts (tabbing through fields) into one write.
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function() {
+      saveSettings(collectSettings()).then(function() {
+        rememberGoodValues();
+      }).catch(function(err) {
+        showToast('Could not save settings: ' + err.message, 'error');
+      });
+    }, 150);
+  }
+
+  function onSettingBlur(el) {
+    if (inputIsValid(el)) {
+      updateSummary();
+      autoSave();
+      return;
+    }
+    var min = el.min !== '' ? el.min : null, max = el.max !== '' ? el.max : null;
+    var range = min !== null && max !== null ? ' (' + min + ' to ' + max + ')'
+              : min !== null ? ' (minimum ' + min + ')' : '';
+    showToast('Invalid value' + range + ', reverted', 'error');
+    el.value = lastGoodValues[el.id] !== undefined ? lastGoodValues[el.id] : el.defaultValue;
+    updateSummary();
+  }
+
   function updateUnitLabels() {
-    var badge = document.getElementById('unitBadge');
-    badge.textContent = distanceUnit;
-    document.getElementById('labelProbeFeed').textContent = 'Probe Feed Rate (' + feedUnit + ')';
-    document.getElementById('labelTravelFeed').textContent = 'Travel Feed Rate (' + feedUnit + ')';
-    document.getElementById('labelClearance').textContent = 'Retract Clearance (' + distanceUnit + ')';
-    document.getElementById('labelMaxProbe').textContent = 'Max Probe Distance (' + distanceUnit + ')';
-    document.getElementById('labelMeasureDist').textContent = 'Measurement Distance (' + distanceUnit + ')';
+    var badge = $('ea-units-badge');
+    badge.textContent = isImperial ? 'IMPERIAL' : 'METRIC';
+    badge.style.display = 'inline-block';
+    $('labelProbeFeed').textContent = 'Probe Feed Rate (' + feedUnit + ')';
+    $('labelTravelFeed').textContent = 'Travel Feed Rate (' + feedUnit + ')';
+    $('labelClearance').textContent = 'Retract Clearance (' + distanceUnit + ')';
+    $('labelMaxProbe').textContent = 'Max Probe Distance (' + distanceUnit + ')';
+    $('labelMeasureDist').textContent = 'Measurement Distance (' + distanceUnit + ')';
+    updateSummary();
+  }
+
+  function closeDialog() {
+    window.postMessage({ type: 'close-plugin-dialog' }, '*');
   }
 
   // --- Init ---
   function init() {
-    if (INITIAL_CONFIG && typeof INITIAL_CONFIG === 'object') {
-      applySettings(INITIAL_CONFIG);
-    }
+    if (INITIAL_CONFIG && typeof INITIAL_CONFIG === 'object') applySettings(INITIAL_CONFIG);
     updateEdgeVisual();
+    rememberGoodValues();
 
     getAppSettings().then(function(settings) {
       if (settings && (settings.units === 'imperial' || settings.units === 'in')) {
@@ -1122,93 +1555,94 @@
         feedUnit = 'in/min';
       }
       updateUnitLabels();
-    }).catch(function() {
-      updateUnitLabels();
-    });
+    }).catch(function() { updateUnitLabels(); });
 
-    // Click handlers for edge sides and labels
-    document.querySelectorAll('.ea-edge-side, .ea-edge-label').forEach(function(el) {
-      el.addEventListener('click', function() {
-        var edge = el.getAttribute('data-edge');
-        if (edge) selectEdge(edge);
+    // Sidebar nav
+    qsa('.ea-nav-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var target = btn.getAttribute('data-nav');
+        qsa('.ea-nav-btn').forEach(function(b) { b.classList.toggle('active', b === btn); });
+        qsa('.ea-content').forEach(function(c) {
+          c.classList.toggle('active', c.getAttribute('data-view') === target);
+        });
+        if (target === 'probe') updateSummary();
       });
     });
 
-    document.getElementById('startProbeBtn').addEventListener('click', runProbeSequence);
-    document.getElementById('stopProbeBtn').addEventListener('click', function() {
+    // Edge picker
+    qsa('.ea-edge-side, .ea-edge-label').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var edge = el.getAttribute('data-edge');
+        if (edge && !isProbing) selectEdge(edge);
+      });
+    });
+
+    // Settings inputs save on blur when valid, revert when not
+    SETTING_INPUTS.forEach(function(id) {
+      var el = $(id);
+      el.addEventListener('change', function() { onSettingBlur(el); });
+      el.addEventListener('blur', function() { onSettingBlur(el); });
+    });
+
+    $('startProbeBtn').addEventListener('click', runProbeSequence);
+    $('stopProbeBtn').addEventListener('click', function() {
       stopProbing = true;
       setStatus('Stopping — issuing soft reset...');
       sendCommand('\x18').catch(function() {});
     });
 
-    document.getElementById('applyBtn').addEventListener('click', function() {
-      // Re-check gcode status before applying
+    $('ea-clear-results').addEventListener('click', function() {
+      showConfirm('Clear Results', 'Discard the last probe result?', clearResults, 'Clear');
+    });
+
+    $('applyBtn').addEventListener('click', function() {
       getInitState().then(function(data) {
         var state = data && data.serverState;
         var jobLoaded = state && state.jobLoaded;
-        if (jobLoaded && jobLoaded.filename) {
-          hasGcode = true;
-          currentFilename = jobLoaded.filename;
-          if (jobLoaded.isTemporary && jobLoaded.sourceFile) {
-            originalFilename = jobLoaded.sourceFile;
-          } else {
-            originalFilename = jobLoaded.filename;
-          }
+        rememberJob(jobLoaded);
+        if (hasGcode) {
           applyRotation();
         } else {
-          showConfirm('No Program Loaded', 'Please load a G-code program first before applying rotation compensation.', function() {});
+          showConfirm('No Program Loaded', 'Load a G-code program first, then apply the rotation.', null, 'OK');
         }
-      }).catch(function() {
-        showToast('Could not check G-code status', 'error');
-      });
+      }).catch(function() { showToast('Could not check G-code status', 'error'); });
     });
 
-    // Unlock button
-    document.getElementById('unlockBtn').addEventListener('click', function() {
-      // Soft reset first, wait 500ms, then unlock — same as core app
+    // Unlock: soft reset, wait, then $X — same as the core app
+    $('unlockBtn').addEventListener('click', function() {
       sendCommand('\x18').then(function() {
         return new Promise(function(resolve) { setTimeout(resolve, 500); });
       }).then(function() {
         return sendCommand('$X');
       }).then(function() {
         showToast('Machine unlocked', 'success');
-        document.getElementById('unlockBtn').style.display = 'none';
+        setUnlockVisible(false);
       }).catch(function(err) {
         showToast('Unlock failed: ' + err.message, 'error');
       });
     });
 
-    // Real-time coordinate + alarm state updates
-    window.addEventListener('message', function(event) {
-      handleServerStateUpdate(event);
-      // Check alarm state from status updates
-      if (event.data && event.data.type === 'server-state-update') {
-        var state = event.data.state;
-        var status = null;
-        if (state && state.machineState) status = state.machineState.status;
-        else if (state && state.lastStatus) status = state.lastStatus.status;
-        else if (state && state.status) status = state.status;
-        var unlockBtn = document.getElementById('unlockBtn');
-        if (status === 'Alarm') {
-          unlockBtn.style.display = '';
-        } else if (status) {
-          unlockBtn.style.display = 'none';
-        }
+    $('ea-close-btn').addEventListener('click', function() {
+      if (isProbing) {
+        showToast('Stop the probe cycle before closing', 'error');
+        return;
       }
+      // Anything still in the fields is written on the way out; invalid
+      // fields already reverted on blur so this is always a good set.
+      clearTimeout(saveTimer);
+      saveSettings(collectSettings()).catch(function() {}).then(closeDialog);
     });
+
     getServerState().then(function(state) {
       var coords = extractCoordinatesFromPayload(state);
       if (coords) updateAxisDisplay(coords);
       checkAlarmState();
     }).catch(function() {});
 
-    document.querySelector('.ea-dialog').style.visibility = 'visible';
+    $('ea-wrapper').style.visibility = 'visible';
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
