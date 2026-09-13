@@ -1,7 +1,7 @@
 {
   "id": "com.ncsender.edgealign",
   "name": "Edge Align",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "2.0.0",
   "author": "ncSender",
   "description": "Material alignment by edge probing — find the angle of rotation and apply XY offset compensation to your G-code.",
