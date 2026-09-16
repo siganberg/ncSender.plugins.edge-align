@@ -1147,12 +1147,15 @@
     var dot2 = $('vizDot2');
     dot1.classList.add('visible');
     dot2.classList.add('visible');
+    // The move between the points is always positive along the edge (Y+ here),
+    // so point 1 is probed at the front and point 2 toward the back. The diagram
+    // had them the other way round on the left and right edges.
     if (side === 'left') {
-      dot1.style.cssText = 'left: -1px; top: 25%; transform: translate(-50%, -50%);';
-      dot2.style.cssText = 'left: -1px; top: 75%; transform: translate(-50%, -50%);';
+      dot1.style.cssText = 'left: -1px; top: 75%; transform: translate(-50%, -50%);';
+      dot2.style.cssText = 'left: -1px; top: 25%; transform: translate(-50%, -50%);';
     } else if (side === 'right') {
-      dot1.style.cssText = 'right: -1px; left: auto; top: 25%; transform: translate(50%, -50%);';
-      dot2.style.cssText = 'right: -1px; left: auto; top: 75%; transform: translate(50%, -50%);';
+      dot1.style.cssText = 'right: -1px; left: auto; top: 75%; transform: translate(50%, -50%);';
+      dot2.style.cssText = 'right: -1px; left: auto; top: 25%; transform: translate(50%, -50%);';
     } else if (side === 'front') {
       dot1.style.cssText = 'bottom: -1px; top: auto; left: 25%; transform: translate(-50%, 50%);';
       dot2.style.cssText = 'bottom: -1px; top: auto; left: 75%; transform: translate(-50%, 50%);';
