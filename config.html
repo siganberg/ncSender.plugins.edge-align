@@ -1217,6 +1217,7 @@
     var travelFeed = convertToMetric(parseFloat($('travelFeedRate').value));
     var clearance = convertToMetric(parseFloat($('clearanceHeight').value));
     var maxProbe = convertToMetric(parseFloat($('maxProbeDistance').value));
+    var unitsSaved = false;
 
     try {
       var probeAxis, probeDir, travelAxis;
@@ -1225,7 +1226,12 @@
       else if (side === 'front') { probeAxis = 'Y'; probeDir = 1;  travelAxis = 'X'; }
       else                       { probeAxis = 'Y'; probeDir = -1; travelAxis = 'X'; }
 
-      await sendCommand('G91');
+      // Every distance and feed above is in millimetres, so probe in G21. A
+      // machine left in G20 would otherwise move 25.4x too far. Save the
+      // units first and put them back once the probe is done.
+      await sendCommand('#<_nc_edgealign_units> = [20 + #<_metric>]');
+      unitsSaved = true;
+      await sendCommand('G21 G91');
       await waitForIdle();
 
       // Probe Point 1
@@ -1260,6 +1266,7 @@
       await waitForIdle();
 
       await sendCommand('G90');
+      await sendCommand('G[#<_nc_edgealign_units>]');
       await waitForIdle();
 
       // Angle — factor in probe direction so every side reports the same sign
@@ -1283,6 +1290,7 @@
       saveSettings(collectSettings()).catch(function() {});
     } catch (err) {
       try { await sendCommand('G90'); } catch (e) {}
+      if (unitsSaved) { try { await sendCommand('G[#<_nc_edgealign_units>]'); } catch (e) {} }
       setStatus('Error: ' + err.message, 'error');
       showToast(err.message, 'error', 5000);
     } finally {
@@ -1369,6 +1377,11 @@
       var rotatedLines = [];
       var isAbsolute = true;
       var currentX = 0, currentY = 0;
+      // 4 decimals is 0.0001 mm in G21 but 0.0001 in (0.00254 mm) in G20,
+      // coarser than the 0.002 mm arc tolerance: a rotated inch arc could
+      // fail with error:33. Write 5 decimals while the program is in inches.
+      var decimals = 4;
+      function fmt(v) { return v.toFixed(decimals); }
 
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
@@ -1381,6 +1394,8 @@
 
         if (trimmed.indexOf('G90') >= 0 && trimmed.indexOf('G90.1') < 0) isAbsolute = true;
         if (trimmed.indexOf('G91') >= 0 && trimmed.indexOf('G91.1') < 0) isAbsolute = false;
+        var unitsWord = trimmed.replace(/\([^)]*\)|;.*$/g, '').match(/G2([01])(?![\d.])/);
+        if (unitsWord) decimals = unitsWord[1] === '0' ? 5 : 4;
 
         if (trimmed.indexOf('G53') >= 0) {
           rotatedLines.push(line);
@@ -1403,14 +1418,14 @@
           var newX = origX * cosA - origY * sinA;
           var newY = origX * sinA + origY * cosA;
 
-          if (xVal !== null) newLine = newLine.replace(/X[+-]?\d*\.?\d+/i, 'X' + newX.toFixed(4));
-          if (yVal !== null) newLine = newLine.replace(/Y[+-]?\d*\.?\d+/i, 'Y' + newY.toFixed(4));
+          if (xVal !== null) newLine = newLine.replace(/X[+-]?\d*\.?\d+/i, 'X' + fmt(newX));
+          if (yVal !== null) newLine = newLine.replace(/Y[+-]?\d*\.?\d+/i, 'Y' + fmt(newY));
 
           // Add the missing axis — rotation needs both to be correct
           if (xVal !== null && yVal === null) {
-            newLine = newLine.replace(/(X[+-]?\d*\.?\d+)/i, '$1 Y' + newY.toFixed(4));
+            newLine = newLine.replace(/(X[+-]?\d*\.?\d+)/i, '$1 Y' + fmt(newY));
           } else if (yVal !== null && xVal === null) {
-            newLine = newLine.replace(/(Y[+-]?\d*\.?\d+)/i, 'X' + newX.toFixed(4) + ' $1');
+            newLine = newLine.replace(/(Y[+-]?\d*\.?\d+)/i, 'X' + fmt(newX) + ' $1');
           }
 
           currentX = origX;
@@ -1424,8 +1439,8 @@
               var jVal = jm ? parseFloat(jm[1]) : 0;
               var newI = iVal * cosA - jVal * sinA;
               var newJ = iVal * sinA + jVal * cosA;
-              if (im) newLine = newLine.replace(/I[+-]?\d*\.?\d+/i, 'I' + newI.toFixed(4));
-              if (jm) newLine = newLine.replace(/J[+-]?\d*\.?\d+/i, 'J' + newJ.toFixed(4));
+              if (im) newLine = newLine.replace(/I[+-]?\d*\.?\d+/i, 'I' + fmt(newI));
+              if (jm) newLine = newLine.replace(/J[+-]?\d*\.?\d+/i, 'J' + fmt(newJ));
             }
           }
           rotatedLines.push(newLine);
